@@ -1,7 +1,7 @@
 # Code for "Revisiting inconsistency in large pharmacogenomic studies"
 
 
-## Full Reproducibility of the Analysis Results
+## Full reproducibility of the analysis results
  
 We will describe how to fully reproduce the figures and tables reported in the main manuscript. We automated the analysis pipeline so that minimal manual interaction is required to reproduce our results. To do this, one must simply:
 
