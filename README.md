@@ -52,7 +52,7 @@ To run the full analysis pipeline in an R session, simply type the following com
 
 ```R
 nbcore <- 4
-\#\#\# to allocate four CPU cores for instance.
+### to allocate four CPU cores for instance.
 source("code/cdrug2_analysis_.R")
 ```
 
