@@ -35,9 +35,9 @@ biocLite(c("VennDiagram", "Hmisc", "xtable", "RColorBrewer", "pROC", "Biobase", 
 	"PharmacoGx", "xlsx"))
 ```
 
-Note that {PharmacoGx} requires that several packages are installed. However, all dependencies are available from CRAN or Bioconductor.
+Note that *PharmacoGx* requires that several packages are installed. However, all dependencies are available from CRAN or Bioconductor.
 
-Once the packages are installed, clone the \texttt{cdrug2} GitHub repository (https://github.com/bhklab/cdrug2) This should create a directory on the file system containing the following files:
+Once the packages are installed, clone the *cdrug2* GitHub repository (https://github.com/bhklab/cdrug2) This should create a directory on the file system containing the following files:
 
   * cdrug2_analysis.R Script generating all the figures and tables reported in the manuscript.
   * cdrug2_foo.R Additional functions implemented specifically for the analysis and results visualization.
