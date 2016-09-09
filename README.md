@@ -1,7 +1,7 @@
 # Code for "Revisiting inconsistency in large pharmacogenomic studies"
 
 
-Full Reproducibility of the Analysis Results
+## Full Reproducibility of the Analysis Results
  
 We will describe how to fully reproduce the figures and tables reported in the main manuscript. We automated the analysis pipeline so that minimal manual interaction is required to reproduce our results. To do this, one must simply:
 
@@ -13,7 +13,7 @@ We will describe how to fully reproduce the figures and tables reported in the m
 
 The code and associated files are publicly available on GitHub: https://github.com/bhklab/cdrug2
 
-Set up the software environment
+## Set up the software environment
 
 We developed and tested our analysis pipeline using R running on Linux and Mac OSX platforms.
 
@@ -29,16 +29,16 @@ All these packages are available on CRAN (http://cran.r-project.org) or Biocondu
 
 Run the following commands in a R session to install all the required packages:
 
-
+```R
 source("http://bioconductor.org/biocLite.R")
 biocLite(c("VennDiagram", "Hmisc", "xtable", "RColorBrewer", "pROC", "Biobase", "genefu"
 	"PharmacoGx", "xlsx"))
-
+```
 
 Note that {PharmacoGx} requires that several packages are installed. However, all dependencies are available from CRAN or Bioconductor.
 
 Once the packages are installed, clone the \texttt{cdrug2} GitHub repository (https://github.com/bhklab/cdrug2) This should create a directory on the file system containing the following files:
-\begin{description}
+
   * cdrug2_analysis.R Script generating all the figures and tables reported in the manuscript.
   * cdrug2_foo.R Additional functions implemented specifically for the analysis and results visualization.
 
@@ -50,16 +50,16 @@ Open a terminal window and go to the \texttt{cdrug} directory. You can easily ru
 
 To run the full analysis pipeline in an R session, simply type the following command:
 
-
+```R
 nbcore <- 4
-#to allocate four CPU cores for instance.
+\#\#\# to allocate four CPU cores for instance.
 source("code/cdrug2_analysis_.R")
+```
 
 Key messages will be displayed to monitor the progress of the analysis.
 
-
 The analysis pipeline was developed so that all intermediate analysis results are saved in the directory output. Therefore, in case of interruption, the pipeline will restart where it stopped.
 
-Generate the Supplementary Information
+## Generate the Supplementary Information
 
 After completion of the analysis pipeline a directory output will be created to contain all the intermediate results, tables and figures reported in the main manuscript and this Supplementary Information.
