@@ -1,3 +1,143 @@
+#################################################
+### Functions
+#################################################
+
+### Scatterplot with transparency
+myScatterPlot <- function(x, y, method=c("plain", "transparent", "smooth"), transparency=0.10, smooth.pch=".", pch=16, minp=50, col=blues9[7], smooth.col=c("white", blues9), ...) {
+  require(grDevices) || stop("Library grDevices is not available!")
+  method <- match.arg(method)
+  if (length(col) != length(x)) {
+    col <- rep(col, length.out=length(x))
+  }
+  ccix <- complete.cases(x, y)
+  x <- x[ccix]
+  y <- y[ccix]
+  col <- col[ccix]
+  
+  if (sum(ccix) < minp) {
+    ## too few points, no transparency, no smoothing
+    if (sum(ccix) > 0) { rr <- plot(x=x, y=y, col=col, pch=pch, ...) } else { rr <- plot(x=x, y=y, col=col, pch=pch, ...) }
+  } else {
+    ## enough data points
+    switch(method,
+           "plain"={
+             rr <- plot(x=x, y=y, col=col, pch=pch, ...)
+           },
+           "transparent"={
+             myrgb <- sapply(col, grDevices::col2rgb, alpha=FALSE) / 255
+             myrgb <- apply(myrgb, 2, function (x, transparency) {
+               return (rgb(red=x[1], green=x[2], blue=x[3], alpha=transparency, maxColorValue=1))
+             }, transparency=transparency)
+             rr <- plot(x=x, y=y, pch=pch, col=myrgb, ...)
+           },
+           "smooth"={
+             rr <- smoothScatter(x=x, y=y, col="lightgray", colramp=colorRampPalette(smooth.col), pch=smooth.pch, ...)
+           }
+    )
+  }
+  
+  invisible(rr)
+}
+
+
+#################################################
+computeConsistencySensitivity <- function (x, y, type=c("auc", "ic50"), drugs, concentrations, cutoff, cutoff.cytotoxic) {
+  
+  type <- match.arg(type)
+  mystats <- c("pcc.full", "pcc.sens", "scc.full", "scc.sens", "dxy.full", "dxy.sens", "cosine", "mcc", "kappa", "cramerv", "inform")
+  consis <- array(NA, dim=c(length(drugs), length(mystats), 2), dimnames=list(names(drugs), mystats, c("estimate", "p")))
+  for (i in names(drugs)) {
+    x.i <- x[i, ]
+    y.i <- y[i, ]
+    if (type == "ic50") {
+      if (!missing(concentrations)) {
+        ## truncate ic50= and ic50=Inf by the min and max concentrations tested in each study
+        ## ic50 = 0 when the drug dose-response curve starts below 50% viability
+        ## ic50 = Inf when 50% viability is never reached
+        x.i[x.i < concentrations[[1]][i, 1]] <- concentrations[[1]][i, 1]
+        x.i[x.i > concentrations[[1]][i, 2]] <- concentrations[[1]][i, 2]
+        y.i[y.i < concentrations[[2]][i, 1]] <- concentrations[[2]][i, 1]
+        y.i[y.i > concentrations[[2]][i, 2]] <- concentrations[[2]][i, 2]
+      }
+      ## - log10 IC50 in microMolar
+      x.i <- - log10(x.i / 1000)
+      y.i <- - log10(y.i / 1000)
+    }
+    ## binarization
+    cc <- ifelse(drugs[i] == 1, cutoff.cytotoxic, cutoff)
+    x.i.bin <- factor(ifelse(x.i > cc, "sensitive", "resistant"), levels=c("resistant","sensitive"))
+    y.i.bin <- factor(ifelse(y.i > cc, "sensitive", "resistant"), levels=c("resistant","sensitive"))
+    ## consistency measures
+    iix <- !(is.na(x.i.bin) | is.na(y.i.bin)) & !(x.i.bin == "resistant" & y.i.bin == "resistant")
+    ccix <- complete.cases(x.i, y.i)
+    ## pcc full
+    res <- try(cor.test(x.i, y.i, method="pearson", use="complete.obs", alternative="greater"), silent=TRUE)
+    if (class(res) != "try-error") {
+      consis[i, "pcc.full", ] <- c(res$estimate, res$p.value)
+    }
+    ## pcc sensitive
+    res <- try(cor.test(x.i[iix], y.i[iix], method="pearson", use="complete.obs", alternative="greater"), silent=TRUE)
+    if (class(res) != "try-error") {
+      consis[i, "pcc.sens", ] <- c(res$estimate, res$p.value)
+    }
+    ## scc full
+    res <- try(cor.test(x.i, y.i, method="spearman", use="complete.obs", alternative="greater", exact=FALSE), silent=TRUE)
+    if (class(res) != "try-error") {
+      consis[i, "scc.full", ] <- c(res$estimate, res$p.value)
+    }
+    ## scc sensitive
+    res <- try(cor.test(x.i[iix], y.i[iix], method="spearman", use="complete.obs", alternative="greater", exact=FALSE), silent=TRUE)
+    if (class(res) != "try-error") {
+      consis[i, "scc.sens", ] <- c(res$estimate, res$p.value)
+    }
+    ## dxy
+    res <- try(mRMRe::correlate(X=x.i, Y=y.i, method="cindex", alternative="greater"), silent=TRUE) 
+    if (class(res) != "try-error") {
+      consis[i, "dxy.full", ] <- c((res$estimate - 0.5) * 2, res$p)
+    }
+    ## dxy sensitive
+     res <- try(mRMRe::correlate(X=x.i[iix], Y=y.i[iix], method="cindex", alternative="greater"), silent=TRUE)
+    if (class(res) != "try-error") {
+      consis[i, "dxy.sens", ] <- c((res$estimate - 0.5) * 2, res$p)
+    }
+    ## cosine
+    res <- try(PharmacoGx::cosinePerm(x=x.i[ccix] - cc, y=y.i[ccix] - cc, nperm=nperm, nthread=nbcore, alternative="greater"), silent=TRUE)
+    if (class(res) != "try-error") {
+      consis[i, "cosine", ] <- c(res$estimate, res$p.value)
+    }
+    ## mcc
+    #res <- try(PharmacoGx::mcc(x=x.i.bin, y=y.i.bin, nperm=nperm, alternative="greater", nthread=nbcore), silent=TRUE)
+    res <- try(mcc(x=x.i.bin, y=y.i.bin, nperm=nperm, nthread=nbcore), silent=TRUE)
+    if (class(res) != "try-error") {
+      consis[i, "mcc", ] <- c(res$estimate, res$p.value)
+    }
+    ## kappa
+    tt <- table(x=x.i.bin, y=y.i.bin)
+    res <- try(epibasix::epiKappa(tt, k0=0), silent=TRUE)
+    if (class(res) != "try-error") {
+      consis[i, "kappa", "estimate"] <- res$kappa
+    }
+    ## cramerv
+    res <- try(vcd::assocstats(x=tt))
+    if (class(res) != "try-error") {
+      consis[i, "cramerv", ] <- c(res$cramer, res$chisq_tests[1, 3])
+    }
+    ## Informedness: 2 * balanced accuracy - 1
+    ## Powers, David M W (2011). "Evaluation: From Precision, Recall and F-Measure to ROC, Informedness, Markedness & Correlation" (PDF). Journal of Machine Learning Technologies 2 (1): 37–63.
+    ## On the Statistical Consistency of Algorithms for Binary Classification under Class Imbalance 
+    ## Authors: Aditya Menon, Harikrishna Narasimhan, Shivani Agarwal and Sanjay Chawla
+    ## Conference: Proceedings of the 30th International Conference on Machine Learning (ICML-13), Year: 2013, Pages: 603-611
+    ## TODO: implement permutation test
+    res <- try(caret::sensitivity(data=x.i.bin, reference=y.i.bin) + caret::specificity(data=x.i.bin, reference=y.i.bin) - 1)
+    if (class(res) != "try-error") {
+      consis[i, "inform", "estimate"] <- res
+    }
+  }
+  return (consis)
+}
+
+
+#################################################
 biomarkers.validation <-
   function(ccle.sig.rna, gdsc.sig.rna, cell= c("all","common"), method=c("continuous","binary"), drugs, fdr.cut.off=0.05, nperm=100, top.ranked=0) {
     
