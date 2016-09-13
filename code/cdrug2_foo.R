@@ -3,7 +3,8 @@
 #################################################
 
 ### Scatterplot with transparency
-myScatterPlot <- function(x, y, method=c("plain", "transparent", "smooth"), transparency=0.10, smooth.pch=".", pch=16, minp=50, col=blues9[7], smooth.col=c("white", blues9), ...) {
+myScatterPlot <- 
+  function(x, y, method=c("plain", "transparent", "smooth"), transparency=0.10, smooth.pch=".", pch=16, minp=50, col=blues9[7], smooth.col=c("white", blues9), ...) {
   require(grDevices) || stop("Library grDevices is not available!")
   method <- match.arg(method)
   if (length(col) != length(x)) {
@@ -41,7 +42,9 @@ myScatterPlot <- function(x, y, method=c("plain", "transparent", "smooth"), tran
 
 
 #################################################
-computeConsistencySensitivity <- function (x, y, type=c("auc", "ic50"), drugs, concentrations, cutoff, cutoff.cytotoxic) {
+## compute consistency of sensitivity measurments using several methods
+computeConsistencySensitivity <- 
+  function (x, y, type=c("auc", "ic50"), drugs, concentrations, cutoff, cutoff.cytotoxic) {
   
   type <- match.arg(type)
   mystats <- c("pcc.full", "pcc.sens", "scc.full", "scc.sens", "dxy.full", "dxy.sens", "cosine", "mcc", "kappa", "cramerv", "inform")
@@ -138,6 +141,7 @@ computeConsistencySensitivity <- function (x, y, type=c("auc", "ic50"), drugs, c
 
 
 #################################################
+##Validate biomarkers across all common drugs between GDSC and CCLE for a specific FDR and a specific cut off on the number of top ranked biomarkers
 biomarkers.validation <-
   function(ccle.sig.rna, gdsc.sig.rna, cell= c("all","common"), method=c("continuous","binary"), drugs, fdr.cut.off=0.05, nperm=100, top.ranked=0) {
     
@@ -320,6 +324,7 @@ biomarkers.validation <-
 
 
 #################################################
+## plot percentage of validated biomarkers across common drugs between GDSC and CCLE
 plotValidation <- 
   function(validation.result, method, cell, main="")  {
     mycol <- RColorBrewer::brewer.pal(n=8, name="Set3")
@@ -341,6 +346,7 @@ plotValidation <-
 }
 
 #################################################
+## plot change of validated biomarkers ratio for various cut offs on the number of top ranked biomarkers for a specific false discovery rate
 topBarplot <-
   function(ccle.sig.rna, gdsc.sig.rna, cell, method, drugs, fdr.cut.off) {
     top.rankds <- c(1000, 500, 100, 50, 10, 1)
@@ -381,6 +387,7 @@ topBarplot <-
 
 
 #################################################
+## plot change of validated biomarkers ratio for various false discovery rates
 fdrBarplot <-
   function(ccle.sig.rna, gdsc.sig.rna, cell, method, drugs, top.ranked=0) {
     fdrs <- c(0.5, 0.2, 0.1, 0.05, 0.01, 0.001)
@@ -421,6 +428,7 @@ fdrBarplot <-
 
 
 #################################################
+##Plot expression based biomarkers effect size across all drugs 
 estimatesScatterplot <-
   function(ccle.sig.rna, gdsc.sig.rna, cell, method, drugs, features, fdr.cut.off) {
     pdf(file.path(saveres, sprintf("effect_size_%s_%s.pdf", method, cell)), height=16, width=16)
@@ -477,6 +485,7 @@ estimatesScatterplot <-
 
 
 #################################################
+## Determine the specificity of bimomarkers to the studies across drugs using Jaccard Index
 biomarkersSpecificity <- 
   function(ccle.sig.rna, gdsc.sig.rna, cell, method, drugs, features, fdr.cut.off) {
     require(xtable)
@@ -575,6 +584,7 @@ knownBiomarkersCheck <-
 
 
 #################################################
+## Create an excel file for the statistics of expression based gene-drug associations in GDSC and CCLE
 drugBasedBiomarkers <-
   function(ccle.sig.rna, gdsc.sig.rna, cell, method, drugs, features, cut.off) {
     require(WriteXLS)
@@ -601,6 +611,7 @@ drugBasedBiomarkers <-
 
 
 #################################################
+## Create an excel file for the statistics of all the gene-drug associations in GDSC and CCLE
 integrateDrugBasedBiomarkers <-
   function(method, drugs, cut.off) {
     require(WriteXLS)
@@ -661,6 +672,7 @@ integrateDrugBasedBiomarkers <-
 
 
 #################################################
+##Plot biomarkers effect size for all molecular types across all drugs 
 integrateEstimatesScatterplot <-
   function(biomarkers, method, drugs, fdr.cut.off) {
     pdf(file.path(saveres, sprintf("effect_size_%s.pdf", method)), height=16, width=16)
@@ -717,6 +729,7 @@ integrateEstimatesScatterplot <-
 
 
 #################################################
+## Validate bimarkers for both study and check validation ratio significance for each drug by permutation test
 integrateBiomarkersValidation <-
   function(biomarkers, method=c("continuous","binary"), drugs, fdr.cut.off=0.05, nperm=100, top.ranked=0) {
     
@@ -810,6 +823,7 @@ integrateBiomarkersValidation <-
 }
 
 #################################################
+## plot change of validated biomarkers ratio for various false discovery rates
 fdrBarplot <-
   function(biomarkers, method, drugs, top.ranked=0) {
     fdrs <- c(0.5, 0.2, 0.1, 0.05, 0.01, 0.001)
@@ -848,6 +862,7 @@ fdrBarplot <-
 
 
 #################################################
+## plot percentage of validated biomarkers across common drugs between GDSC and CCLE
 plotValidation <- 
   function(validation.result, method, cell, main="")  {
     mycol <- RColorBrewer::brewer.pal(n=8, name="Set3")
