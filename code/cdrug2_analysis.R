@@ -90,7 +90,7 @@ cutoff.cnv.deletion <- 0.75
 GDSC <- PharmacoGx::downloadPSet("GDSC", saveDir=file.path(saveres, "PSets"))
 CCLE <- PharmacoGx::downloadPSet("CCLE", saveDir=file.path(saveres, "PSets")) 
 
-common <- intersectPSet(pSets = list("CCLE"=CCLE, "GDSC"=GDSC), intersectOn = c("cell.lines", "drugs"), strictIntersect = TRUE)
+common <- PharmacoGx::intersectPSet(pSets = list("CCLE"=CCLE, "GDSC"=GDSC), intersectOn = c("cell.lines", "drugs"), strictIntersect = TRUE)
 drugs <- c("paclitaxel", "17-AAG", "PD-0325901", "AZD6244", "TAE684", "AZD0530", "PD-0332991", "Crizotinib", "PLX4720", "Nutlin-3", "lapatinib", "Nilotinib", "PHA-665752", "Erlotinib", "Sorafenib")
 
 ## drugs in common
@@ -146,10 +146,10 @@ par(mfrow = c(4,3))
 exps <- NULL
 for (exp in ccle.filter$noisy)
 {
-  cell <- sensitivityInfo(common$CCLE)[exp, "cellid"]
-  drug <- sensitivityInfo(common$CCLE)[exp, "drugid"]
+  cell <- PharmacoGx::sensitivityInfo(common$CCLE)[exp, "cellid"]
+  drug <- PharmacoGx::sensitivityInfo(common$CCLE)[exp, "drugid"]
   exps <- c(exps, paste(cell, drug, sep="_"))
-  drugDoseResponseCurve(pSets=common, drug=drug, cellline=cell)
+  PharmacoGx::drugDoseResponseCurve(pSets=common, drug=drug, cellline=cell)
   legend("bottomleft", legend="CCLE", bty="n")
 }
 
@@ -157,21 +157,22 @@ for (exp in gdsc.filter$noisy) {
   cell <- sensitivityInfo(common$GDSC)[exp, "cellid"]
   drug <- sensitivityInfo(common$GDSC)[exp, "drugid"]
   if (!(paste(cell, drug, sep="_") %in% exps)) {
-    drugDoseResponseCurve(pSets=common, drug=drug, cellline=cell)
+    PharmacoGx::drugDoseResponseCurve(pSets=common, drug=drug, cellline=cell)
   }
   legend("bottomleft", legend="GDSC", bty="n")
   
 }
 dev.off()
+
+ex.gdsc.filter <- PharmacoGx:::filterNoisyCurves(GDSC, nthread=detectCores())
+lapply(ex.gdsc.filter, length)
 ### plotting GDSC noisy curves, curves might be noisy in one or both studies
-
-
 pdf(file.path(saveres, "GDSC_noisy.pdf"), height=15.5, width=12.5)
 par(mfrow = c(4,3))
-for (exp in gdsc.filter$noisy) {
+for (exp in ex.gdsc.filter$noisy) {
   cell <- sensitivityInfo(GDSC)[exp, "cellid"]
   drug <- sensitivityInfo(GDSC)[exp, "drugid"]
-  drugDoseResponseCurve(pSets=GDSC, drug=drug, cellline=cell)
+  PharmacoGx::drugDoseResponseCurve(pSets=GDSC, drug=drug, cellline=cell)
 }
 dev.off()
 
@@ -185,7 +186,7 @@ cases <- rbind(
 
 for (i in 1:nrow(cases)) {
   pdf(file.path(saveres, sprintf("%s_%s.pdf", cases[i,2], cases[i,1])), height=5, width=5)
-  drugDoseResponseCurve(pSets=common, drug=cases[i,2], cellline=cases[i,1], legends.label="ic50_published", plot.type="Fitted", ylim=c(0,130))
+  PharmacoGx::drugDoseResponseCurve(pSets=common, drug=cases[i,2], cellline=cases[i,1], legends.label="ic50_published", plot.type="Fitted", ylim=c(0,130))
   dev.off()
 }
 
@@ -198,7 +199,7 @@ cases <- rbind(
 
 for (i in 1:nrow(cases)) {
   pdf(file.path(saveres, sprintf("%s_%s.pdf", cases[i,2], cases[i,1])), height=5, width=5)
-  drugDoseResponseCurve(pSets=common, drug=cases[i,2], cellline=cases[i,1])
+  PharmacoGx::drugDoseResponseCurve(pSets=common, drug=cases[i,2], cellline=cases[i,1])
   dev.off()
 }
 
@@ -211,9 +212,9 @@ cases <- rbind(
   c("NCI-H1092","AZD6482"))
 for (i in 1:nrow(cases)) {
   pdf(file.path(saveres, sprintf("%s_%s.pdf", cases[i,2], cases[i,1])), height=5, width=5)
-  drugDoseResponseCurve(pSets=GDSC, drug=cases[i,2], cellline=cases[i,1], summarize.replicates = FALSE, plot.type = "Fitted", mycol=RColorBrewer::brewer.pal(n=4, name="Set1")[c(3,4)])
+  PharmacoGx::drugDoseResponseCurve(pSets=GDSC, drug=cases[i,2], cellline=cases[i,1], summarize.replicates = FALSE, plot.type = "Fitted", mycol=RColorBrewer::brewer.pal(n=4, name="Set1")[c(3,4)])
   exp <- which(sensitivityInfo(GDSC)$cellid==cases[i,1] & sensitivityInfo(GDSC)$drugid==cases[i,2])
-  ABC <- computeABC(conc1 = GDSC@sensitivity$raw[exp[1],,"Dose"], conc2 = GDSC@sensitivity$raw[exp[2],,"Dose"], viability1 = GDSC@sensitivity$raw[exp[1],,"Viability"], viability2 = GDSC@sensitivity$raw[exp[2],,"Viability"])
+  ABC <- PharmacoGx::computeABC(conc1 = GDSC@sensitivity$raw[exp[1],,"Dose"], conc2 = GDSC@sensitivity$raw[exp[2],,"Dose"], viability1 = GDSC@sensitivity$raw[exp[1],,"Viability"], viability2 = GDSC@sensitivity$raw[exp[2],,"Viability"])
   legend("bottomright", legend = sprintf("ABC= %s", round(ABC, digits=2)), bty="n")
   dev.off()
 }
@@ -229,30 +230,22 @@ if(!file.exists(myf)){
   common$GDSC@sensitivity$raw <- common$GDSC@sensitivity$raw[gdsc.filter$ok, , ]
   common$GDSC@sensitivity$profiles <- common$GDSC@sensitivity$profiles[gdsc.filter$ok, ]
   
-  cells <- intersectList(phenoInfo(common$CCLE, "rna")$cellid, phenoInfo(common$GDSC, "rna2")$cellid, unique(sensitivityInfo(common$CCLE)$cellid), unique(sensitivityInfo(common$GDSC)$cellid))
+  cells <- PharmacoGx::intersectList(phenoInfo(common$CCLE, "rna")$cellid, phenoInfo(common$GDSC, "rna2")$cellid, unique(sensitivityInfo(common$CCLE)$cellid), unique(sensitivityInfo(common$GDSC)$cellid))
   cells <- setdiff(cells, snp.outliers)
-  common.clarified <- intersectPSet(pSets = list("CCLE"=common$CCLE, "GDSC"=common$GDSC), intersectOn = c("cell.lines", "drugs"), cells=cells)
+  common.clarified <- PharmacoGx::intersectPSet(pSets = list("CCLE"=common$CCLE, "GDSC"=common$GDSC), intersectOn = c("cell.lines", "drugs"), cells=cells)
   save(common.clarified, file=myf)
 } else{
   load(myf)
 }
  
-myf <- file.path(saveres, "signatures_data.RData")
-if(!file.exists(myf)){
-  drugs <- c("paclitaxel", "17-AAG", "PD-0325901", "AZD6244", "TAE684", "AZD0530", "PD-0332991", "Crizotinib", "PLX4720", "Nutlin-3", "lapatinib", "Nilotinib", "PHA-665752", "Erlotinib", "Sorafenib")
-  features <- intersect(rownames(featureInfo(CCLE, "rna")), rownames(featureInfo(GDSC, "rna2")))
-  save(drugs, features, common.clarified, file=myf)  
-} else{
-  load(myf)
-}
 
 ### plotting all the common experiments between studies(Supplementary File 3)
 pdf(file.path(saveres, "Supplementary_File_3.pdf"), height=15.5, width=12.5)
 par(mfrow = c(4,3))
 for (exp in rownames(sensitivityInfo(common.clarified$CCLE))) {
-  cell <- sensitivityInfo(common.clarified$CCLE)[exp, "cellid"]
-  drug <- sensitivityInfo(common.clarified$CCLE)[exp, "drugid"]
-  drugDoseResponseCurve(pSets=common.clarified, drug=drug, cellline=cell, plot.type="Fitted", ylim=c(0,130))
+  cell <- PharmacoGx::sensitivityInfo(common.clarified$CCLE)[exp, "cellid"]
+  drug <- PharmacoGx::sensitivityInfo(common.clarified$CCLE)[exp, "drugid"]
+  PharmacoGx::drugDoseResponseCurve(pSets=common.clarified, drug=drug, cellline=cell, plot.type="Fitted", ylim=c(0,130))
 }
 dev.off() 
 
@@ -272,6 +265,9 @@ if(!file.exists(myf)) {
   GDSC.clarified@sensitivity$info <- GDSC.clarified@sensitivity$info[gdsc.filter$ok, ]
   GDSC.clarified@sensitivity$raw <- GDSC.clarified@sensitivity$raw[gdsc.filter$ok, , ]
   GDSC.clarified@sensitivity$profiles <- GDSC.clarified@sensitivity$profiles[gdsc.filter$ok, ]
+  cells <- cellNames(GDSC.clarified)
+  cells <- setdiff(cells, snp.outliers)
+  GDSC.clarified <- subsetTo(GDSC.clarified, cells=cells)
   save(GDSC.clarified, file=myf)
 } else {
   load(myf)
@@ -292,24 +288,36 @@ if(!file.exists(myf)) {
   CCLE.clarified@sensitivity$info <- CCLE.clarified@sensitivity$info[ccle.filter$ok, ]
   CCLE.clarified@sensitivity$raw <- CCLE.clarified@sensitivity$raw[ccle.filter$ok, , ]
   CCLE.clarified@sensitivity$profiles <- CCLE.clarified@sensitivity$profiles[ccle.filter$ok, ]
+  cells <- cellNames(CCLE.clarified)
+  cells <- setdiff(cells, snp.outliers)
+  CCLE.clarified <- subsetTo(CCLE.clarified, cells=cells)
   save(CCLE.clarified, file=myf)
 }else {
   load(myf)
 }
 
+myf <- file.path(saveres, "signatures_data.RData")
+if(!file.exists(myf)){
+  drugs <- c("paclitaxel", "17-AAG", "PD-0325901", "AZD6244", "TAE684", "AZD0530", "PD-0332991", "Crizotinib", "PLX4720", "Nutlin-3", "lapatinib", "Nilotinib", "PHA-665752", "Erlotinib", "Sorafenib")
+  features <- intersect(rownames(featureInfo(CCLE.clarified, "rna")), rownames(featureInfo(GDSC.clarified, "rna2")))
+  save(drugs, features, common.clarified, file=myf)  
+} else{
+  load(myf)
+}
+
 ### plotting all internal replicates in GDSC 
 
-replicates <- sensitivityInfo(GDSC.clarified)[which(sensitivityInfo(GDSC.clarified)$drugid == "AZD6482"),]
+replicates <- PharmacoGx::sensitivityInfo(GDSC.clarified)[which(sensitivityInfo(GDSC.clarified)$drugid == "AZD6482"),]
 replicates <- replicates[which(duplicated(replicates$cellid)),] #577 it was 617 before removing the noisy ones
 
 ABC <- NULL
 for (exps in 1:nrow(replicates)) {
   cell <- replicates[exps, "cellid"]
   drug <- replicates[exps, "drugid"]
-  exp <-   which(sensitivityInfo(GDSC.clarified)$cellid==cell & sensitivityInfo(GDSC.clarified)$drugid==drug)
-  ABC <- c(ABC, computeABC(conc1 = GDSC.clarified@sensitivity$raw[exp[1],,"Dose"], conc2 = GDSC.clarified@sensitivity$raw[exp[2],,"Dose"], viability1 = GDSC.clarified@sensitivity$raw[exp[1],,"Viability"], viability2 = GDSC.clarified@sensitivity$raw[exp[2],,"Viability"]))
+  exp <-   which(PharmacoGx::sensitivityInfo(GDSC.clarified)$cellid==cell & sensitivityInfo(GDSC.clarified)$drugid==drug)
+  ABC <- c(ABC, PharmacoGx::computeABC(conc1 = GDSC.clarified@sensitivity$raw[exp[1],,"Dose"], conc2 = GDSC.clarified@sensitivity$raw[exp[2],,"Dose"], viability1 = GDSC.clarified@sensitivity$raw[exp[1],,"Viability"], viability2 = GDSC.clarified@sensitivity$raw[exp[2],,"Viability"]))
 }
-biologucal_replicates_ABC <- ABC[which(!is.na(ABC))]
+biological_replicates_ABC <- ABC[which(!is.na(ABC))]
 pdf(file.path(saveres, "Supplementary_File_4.pdf"), height=15.5, width=12.5)
 par(mfrow = c(4,3))
 
@@ -317,7 +325,7 @@ for (i in order(ABC, decreasing = T)) {
   exp <- rownames(replicates)[i]
   cell <- replicates[exp, "cellid"]
   drug <- replicates[exp, "drugid"]
-  drugDoseResponseCurve(pSets=GDSC, drug=drug, cellline=cell, summarize.replicates = FALSE, plot.type = "Fitted", mycol=RColorBrewer::brewer.pal(n=4, name="Set1")[c(3,4)])
+  PharmacoGx::drugDoseResponseCurve(pSets=GDSC.clarified, drug=drug, cellline=cell, summarize.replicates = FALSE, plot.type = "Fitted", mycol=RColorBrewer::brewer.pal(n=4, name="Set1")[c(3,4)])
   legend("bottomleft", legend = sprintf("ABC= %s", round(ABC[i], digits=2)), bty="n")
 }
 
@@ -328,31 +336,31 @@ dev.off()
 
 ABC <- NULL
 for (exp.ccle in rownames(sensitivityInfo(common.clarified$CCLE))) {
-  cell <- sensitivityInfo(common.clarified$CCLE)[exp.ccle, "cellid"]
-  drug <- sensitivityInfo(common.clarified$CCLE)[exp.ccle, "drugid"]
-  exp.gdsc <-   rownames(sensitivityInfo(common.clarified$GDSC))[which(sensitivityInfo(common.clarified$GDSC)$cellid==cell & sensitivityInfo(common.clarified$GDSC)$drugid==drug)]
-  ABC <- c(ABC, computeABC(conc1 = common.clarified$CCLE@sensitivity$raw[exp.ccle,,"Dose"], 
+  cell <- PharmacoGx::sensitivityInfo(common.clarified$CCLE)[exp.ccle, "cellid"]
+  drug <- PharmacoGx::sensitivityInfo(common.clarified$CCLE)[exp.ccle, "drugid"]
+  exp.gdsc <-   rownames(PharmacoGx::sensitivityInfo(common.clarified$GDSC))[which(PharmacoGx::sensitivityInfo(common.clarified$GDSC)$cellid==cell & PharmacoGx::sensitivityInfo(common.clarified$GDSC)$drugid==drug)]
+  ABC <- c(ABC, PharmacoGx::computeABC(conc1 = common.clarified$CCLE@sensitivity$raw[exp.ccle,,"Dose"], 
                            conc2 = common.clarified$GDSC@sensitivity$raw[exp.gdsc,,"Dose"], 
                            viability1 = common.clarified$CCLE@sensitivity$raw[exp.ccle,,"Viability"], 
                            viability2 = common.clarified$GDSC@sensitivity$raw[exp.gdsc,,"Viability"]))
 }
-names(ABC) <- rownames(sensitivityInfo(common.clarified$CCLE))
-ABC <- cbind(ABC, "cellid"=sensitivityInfo(common.clarified$CCLE)[names(ABC),"cellid"], "drugid"=sensitivityInfo(common.clarified$CCLE)[names(ABC),"drugid"])
+names(ABC) <- rownames(PharmacoGx::sensitivityInfo(common.clarified$CCLE))
+ABC <- cbind(ABC, "cellid"=PharmacoGx::sensitivityInfo(common.clarified$CCLE)[names(ABC),"cellid"], "drugid"=PharmacoGx::sensitivityInfo(common.clarified$CCLE)[names(ABC),"drugid"])
 
 Inter_studies_ABC <- ABC[which(!is.na(ABC[,"ABC"])),"ABC"]
 ###wilcoxon test
-biologucal_replicates_ABC <- as.numeric(biologucal_replicates_ABC)
+biological_replicates_ABC <- as.numeric(biological_replicates_ABC)
 Inter_studies_ABC <- as.numeric(Inter_studies_ABC)
-tt <- matrix(NA, ncol=2, nrow=max(length(Inter_studies_ABC), length(biologucal_replicates_ABC)))
+tt <- matrix(NA, ncol=2, nrow=max(length(Inter_studies_ABC), length(biological_replicates_ABC)))
 colnames(tt) <- c("Intra", "Inter")
-tt[1:length(biologucal_replicates_ABC),"Intra"] <- biologucal_replicates_ABC
+tt[1:length(biological_replicates_ABC),"Intra"] <- biological_replicates_ABC
 tt[1:length(Inter_studies_ABC),"Inter"] <- Inter_studies_ABC
 
 pdf(file.path(saveres, "inter_intra_abc.pdf"), height=7, width=7)
 par(mar=c(9,5,5,2))
 boxplot(tt, las = 2, col = "gray", cex.lab=1, cex.axis=1, pch=19, ylab="ABC", outpch=20, outcex=0.5)
 dev.off()
-test <- wilcox.test(Inter_studies_ABC, biologucal_replicates_ABC, paired=FALSE)
+test <- wilcox.test(Inter_studies_ABC, biological_replicates_ABC, paired=FALSE)
 test$p.value
 ###box plot for ABC
 tt <- as.data.frame(matrix(NA, ncol=length(drugNames(common.clarified$CCLE)), nrow=length(cellNames(common.clarified$CCLE))))
@@ -392,47 +400,29 @@ dev.off()
 
 
 ## since all the kept experiments are common experiments it's just needed to check for one of the studies
-unique(sensitivityInfo(common.clarified$GDSC)[which(sensitivityInfo(common.clarified$GDSC)$cellid %in% snp.outliers),"cellid"])
-sort(unique(sensitivityInfo(common.clarified$GDSC)[which(sensitivityInfo(common.clarified$GDSC)$cellid %in% snp.outliers),"drugid"]))
+unique(PharmacoGx::sensitivityInfo(common.clarified$GDSC)[which(PharmacoGx::sensitivityInfo(common.clarified$GDSC)$cellid %in% snp.outliers),"cellid"])
+sort(unique(PharmacoGx::sensitivityInfo(common.clarified$GDSC)[which(PharmacoGx::sensitivityInfo(common.clarified$GDSC)$cellid %in% snp.outliers),"drugid"]))
 
 
 
 ## min and max concentrations tested in both datasets
 range.concentration.gdsc <- range.concentration.ccle <- range.concentration <- NULL
 ## GDSC
-for (i in 1:nrow(drugInfo(GDSC))) {
+for (i in 1:nrow(drugInfo(GDSC.clarified))) {
   ## GDSC
-  dix <- !is.na(sensitivityInfo(GDSC)[ , "drugid"]) & sensitivityInfo(GDSC)[ , "drugid"] == rownames(drugInfo(GDSC))[i]
-  tt <- GDSC@sensitivity$raw[dix, ,"Dose"]
+  dix <- !is.na(sensitivityInfo(GDSC.clarified)[ , "drugid"]) & sensitivityInfo(GDSC.clarified)[ , "drugid"] == rownames(drugInfo(GDSC.clarified))[i]
+  tt <- GDSC.clarified@sensitivity$raw[dix, ,"Dose"]
   range.concentration.gdsc <- rbind(range.concentration.gdsc, c(min(as.numeric(tt[ , 1]), na.rm=TRUE), max(as.numeric(tt[ , ncol(tt)]), na.rm=TRUE)))
 }
-dimnames(range.concentration.gdsc) <- list(rownames(drugInfo(GDSC)), c("Dose.min", "Dose.max"))
+dimnames(range.concentration.gdsc) <- list(rownames(drugInfo(GDSC.clarified)), c("Dose.min", "Dose.max"))
 ## CCLE
-for (i in 1:nrow(drugInfo(CCLE))) {
+for (i in 1:nrow(drugInfo(CCLE.clarified))) {
   ## CCLE
-  dix <- !is.na(sensitivityInfo(CCLE)[ , "drugid"]) & sensitivityInfo(CCLE)[ , "drugid"] == rownames(drugInfo(CCLE))[i]
-  tt <- CCLE@sensitivity$raw[dix, ,"Dose"]
+  dix <- !is.na(sensitivityInfo(CCLE.clarified)[ , "drugid"]) & sensitivityInfo(CCLE.clarified)[ , "drugid"] == rownames(drugInfo(CCLE.clarified))[i]
+  tt <- CCLE.clarified@sensitivity$raw[dix, ,"Dose"]
   range.concentration.ccle <- rbind(range.concentration.ccle, c(min(as.numeric(tt[ , 1]), na.rm=TRUE), max(as.numeric(tt[ , ncol(tt)]), na.rm=TRUE)))
 }
-dimnames(range.concentration.ccle) <- list(rownames(drugInfo(CCLE)), c("Dose.min", "Dose.max"))
-
-################################################
-## reasonable cutoffs for gene expression (lowly vs highly expressed) and drug sensitivity (insensitive vs sensitive) data
-################################################
-
-## reasonable cutoff for affymetrix microarrays = 5
-affy.cutoff <- 5
-## reasonable cutoff for rnaseq = 1
-cutoff.rnaseq.ccle <- 1
-## reasonable cutoff for AUC = 0.2
-auc.cutoff <- 0.2
-auc.cytotoxic.cutoff <- 0.5
-## reasonable cutoff for -log10(IC50 in nanooM) = 2
-ic50.cutoff <- 3
-ic50.cytotoxic.cutoff <- 4
-## reasonable cutoffs for cnv
-cutoff.cnv.amplification <- 1.25
-cutoff.cnv.deletion <- 0.75
+dimnames(range.concentration.ccle) <- list(rownames(drugInfo(CCLE.clarified)), c("Dose.min", "Dose.max"))
 
 ## distribution of expression data
 grDevices::pdf(file=file.path(saveres, sprintf("distribution_rna.pdf")), height=4, width=12)
@@ -441,10 +431,10 @@ par(mfrow=c(2, 3), cex=0.8, las=1)
 yylim <- c(0, 0.55)
 
 ## common genes
-gix <- paste("geneid", intersectList(list(featureInfo(pSet=common$GDSC, mDataType="rna2")[ , "EnsemblGeneId"], featureInfo(pSet=common$CCLE, mDataType="rna")[ , "EnsemblGeneId"], featureInfo(pSet=common$CCLE, mDataType="rnaseq")[ , "EnsemblGeneId"])), sep=".")
+gix <- paste("geneid", intersectList(list(featureInfo(pSet=common.clarified$GDSC, mDataType="rna2")[ , "EnsemblGeneId"], featureInfo(pSet=common.clarified$CCLE, mDataType="rna")[ , "EnsemblGeneId"], featureInfo(pSet=common.clarified$CCLE, mDataType="rnaseq")[ , "EnsemblGeneId"])), sep=".")
 
-mdd <- molecularProfiles(pSet=common$GDSC, mDataType="rna2")
-fdd <- paste("geneid", featureInfo(pSet=common$GDSC, mDataType="rna2")[ , "EnsemblGeneId"], sep=".")
+mdd <- molecularProfiles(pSet=common.clarified$GDSC, mDataType="rna2")
+fdd <- paste("geneid", featureInfo(pSet=common.clarified$GDSC, mDataType="rna2")[ , "EnsemblGeneId"], sep=".")
 mdd <- mdd[!is.na(fdd) & is.element(fdd, gix), , drop=FALSE]
 ## identify cutoff
 myf <- file.path(saveres, "mclust_rna_gdsc.RData")
@@ -458,8 +448,8 @@ if (!file.exists(myf)) {
 hist(as.numeric(mdd), breaks=100, main="Distribution of GDSC Affymetrix data", freq=FALSE, xlab="Affymetrix HG-U219 expression values", ylim=yylim)
 abline(v=cutoff.rna.gdsc, col="red", lty=2, lwd=1)
 
-mdd <- molecularProfiles(pSet=common$CCLE, mDataType="rna")
-fdd <- paste("geneid", featureInfo(pSet=common$CCLE, mDataType="rna")[ , "EnsemblGeneId"], sep=".")
+mdd <- molecularProfiles(pSet=common.clarified$CCLE, mDataType="rna")
+fdd <- paste("geneid", featureInfo(pSet=common.clarified$CCLE, mDataType="rna")[ , "EnsemblGeneId"], sep=".")
 mdd <- mdd[!is.na(fdd) & is.element(fdd, gix), , drop=FALSE]
 ## identify cutoff
 myf <- file.path(saveres, "mclust_rna_ccle.RData")
@@ -473,8 +463,8 @@ if (!file.exists(myf)) {
 hist(as.numeric(mdd), breaks=100, main="Distribution of CCLE Affymetrix data", freq=FALSE, xlab="Affymetrix HG-U133PLUS2 expression values", ylim=yylim)
 abline(v=cutoff.rna.ccle, col="red", lty=2, lwd=1)
 
-mdd <- molecularProfiles(pSet=common$CCLE, mDataType="rnaseq")
-fdd <- paste("geneid", featureInfo(pSet=common$CCLE, mDataType="rnaseq")[ , "EnsemblGeneId"], sep=".")
+mdd <- molecularProfiles(pSet=common.clarified$CCLE, mDataType="rnaseq")
+fdd <- paste("geneid", featureInfo(pSet=common.clarified$CCLE, mDataType="rnaseq")[ , "EnsemblGeneId"], sep=".")
 mdd <- mdd[!is.na(fdd) & is.element(fdd, gix), , drop=FALSE]
 ## identify cutoff
 myf <- file.path(saveres, "mclust_rnaseq_ccle.RData")
@@ -489,11 +479,11 @@ hist(as.numeric(mdd), breaks=100, main="Distribution of CCLE RNA-seq data", freq
 abline(v=cutoff.rnaseq.ccle, col="red", lty=2, lwd=1)
 
 ## distribution of cnv data
-hist(as.numeric(molecularProfiles(pSet=common$CCLE, mDataType="cnv")), breaks=150, main="Distribution of CCLE CNV data", freq=FALSE, xlab="CNV ratios")
+hist(as.numeric(molecularProfiles(pSet=common.clarified$CCLE, mDataType="cnv")), breaks=150, main="Distribution of CCLE CNV data", freq=FALSE, xlab="CNV ratios")
 abline(v=cutoff.cnv.amplification, col="red", lty=2)
 abline(v=cutoff.cnv.deletion, col="red", lty=2)
 
-hist(as.numeric(molecularProfiles(pSet=common$GDSC, mDataType="cnv")), breaks=150, main="Distribution of GDSC CNV data", freq=FALSE, xlab="CNV ratios")
+hist(as.numeric(molecularProfiles(pSet=common.clarified$GDSC, mDataType="cnv")), breaks=150, main="Distribution of GDSC CNV data", freq=FALSE, xlab="CNV ratios")
 abline(v=cutoff.cnv.amplification, col="red", lty=2)
 abline(v=cutoff.cnv.deletion, col="red", lty=2)
 
@@ -503,19 +493,19 @@ dev.off()
 grDevices::pdf(file=file.path(saveres, sprintf("distribution_sensitivity.pdf")), height=8, width=8)
 par(mfrow=c(2, 2), cex=0.8, las=1)
 
-hist(as.numeric(summarizeSensitivityProfiles(pSet=common$GDSC, sensitivity.measure="auc_published", summary.stat="median")), breaks=50, main="Distribution of GDSC AUC data", freq=FALSE, xlab="AUC values as published", xlim=c(0, 1))
+hist(as.numeric(summarizeSensitivityProfiles(pSet=common.clarified$GDSC, sensitivity.measure="auc_published", summary.stat="median")), breaks=50, main="Distribution of GDSC AUC data", freq=FALSE, xlab="AUC values as published", xlim=c(0, 1))
 abline(v=auc.cutoff, col="red", lty=2)
 abline(v=auc.cytotoxic.cutoff, col="orange", lty=2)
 
-hist(as.numeric(summarizeSensitivityProfiles(pSet=common$CCLE, sensitivity.measure="auc_published", summary.stat="median")), breaks=50, main="Distribution of CCLE AUC data", freq=FALSE, xlab="AUC values as published", xlim=c(0, 1))
+hist(as.numeric(summarizeSensitivityProfiles(pSet=common.clarified$CCLE, sensitivity.measure="auc_published", summary.stat="median")), breaks=50, main="Distribution of CCLE AUC data", freq=FALSE, xlab="AUC values as published", xlim=c(0, 1))
 abline(v=auc.cutoff, col="red", lty=2)
 abline(v=auc.cytotoxic.cutoff, col="orange", lty=2)
 
-hist(- log10(as.numeric(summarizeSensitivityProfiles(pSet=common$GDSC, sensitivity.measure="ic50_published", summary.stat="median") / 1000)), breaks=50, main="Distribution of GDSC IC50 data", freq=FALSE, xlab="- log10(IC50 nanoMolar) values as published", xlim=c(0, 8))
+hist(- log10(as.numeric(summarizeSensitivityProfiles(pSet=common.clarified$GDSC, sensitivity.measure="ic50_published", summary.stat="median") / 1000)), breaks=50, main="Distribution of GDSC IC50 data", freq=FALSE, xlab="- log10(IC50 nanoMolar) values as published", xlim=c(0, 8))
 abline(v=ic50.cutoff, col="red", lty=2)
 abline(v=ic50.cytotoxic.cutoff, col="orange", lty=2)
 
-hist(- log10(as.numeric(summarizeSensitivityProfiles(pSet=common$CCLE, sensitivity.measure="ic50_published", summary.stat="median")) / 1000), breaks=50, main="Distribution of CCLE IC50 data", freq=FALSE, xlab="- log10(IC50 nanoMolar) values as published", xlim=c(0, 8))
+hist(- log10(as.numeric(summarizeSensitivityProfiles(pSet=common.clarified$CCLE, sensitivity.measure="ic50_published", summary.stat="median")) / 1000), breaks=50, main="Distribution of CCLE IC50 data", freq=FALSE, xlab="- log10(IC50 nanoMolar) values as published", xlim=c(0, 8))
 abline(v=ic50.cutoff, col="red", lty=2)
 abline(v=ic50.cytotoxic.cutoff, col="orange", lty=2)
 
@@ -527,11 +517,11 @@ dev.off()
 #################################################
 
 ## MAD of cytotoxic drugs vs the rest in full studies
-drug.mad.gdsc <- apply(summarizeSensitivityProfiles(pSet=GDSC, sensitivity.measure="auc_published", summary.stat="median"), 1, mad, na.rm=TRUE)
-iix.gdsc <- factor(!is.na(drugInfo(GDSC)[ , "Drug.class.II"]) & drugInfo(GDSC)[ , "Drug.class.II"] == "Cytotoxic", levels=c(TRUE, FALSE))
+drug.mad.gdsc <- apply(PharmacoGx::summarizeSensitivityProfiles(pSet=GDSC.clarified, sensitivity.measure="auc_published", summary.stat="median"), 1, mad, na.rm=TRUE)
+iix.gdsc <- factor(!is.na(PharmacoGx::drugInfo(GDSC.clarified)[ , "Drug.class.II"]) & PharmacoGx::drugInfo(GDSC.clarified)[ , "Drug.class.II"] == "Cytotoxic", levels=c(TRUE, FALSE))
 levels(iix.gdsc) <- c("Cytotoxic", "Targeted")
-drug.mad.ccle <- apply(summarizeSensitivityProfiles(pSet=CCLE, sensitivity.measure="auc_published", summary.stat="median"), 1, mad, na.rm=TRUE)
-iix.ccle <- factor(!is.na(drugInfo(CCLE)[ , "Class"]) & drugInfo(CCLE)[ , "Class"] == "Cytotoxic", levels=c(TRUE, FALSE))
+drug.mad.ccle <- apply(PharmacoGx::summarizeSensitivityProfiles(pSet=CCLE.clarified, sensitivity.measure="auc_published", summary.stat="median"), 1, mad, na.rm=TRUE)
+iix.ccle <- factor(!is.na(PharmacoGx::drugInfo(CCLE.clarified)[ , "Class"]) & PharmacoGx::drugInfo(CCLE.clarified)[ , "Class"] == "Cytotoxic", levels=c(TRUE, FALSE))
 levels(iix.ccle) <- c("Cytotoxic", "Targeted")
 
 ## find optimal cutoff to descriminate cytotoxic vs targeted drugs based on AUC MAD
@@ -554,8 +544,8 @@ mtext(side=3, at=par("usr")[1] - 0.33, text=LETTERS[2], line=2, font=2, cex=0.8)
 dev.off()
 
 ## MAD of AUC in common cell lines in both studies
-drug.mad.gdsc <- apply(summarizeSensitivityProfiles(pSet=common$GDSC, sensitivity.measure="auc_published", summary.stat="median"), 1, mad, na.rm=TRUE)[drugix]
-drug.mad.ccle <- apply(summarizeSensitivityProfiles(pSet=common$CCLE, sensitivity.measure="auc_published", summary.stat="median"), 1, mad, na.rm=TRUE)[drugix]
+drug.mad.gdsc <- apply(summarizeSensitivityProfiles(pSet=common.clarified$GDSC, sensitivity.measure="auc_published", summary.stat="median"), 1, mad, na.rm=TRUE)[drugix]
+drug.mad.ccle <- apply(summarizeSensitivityProfiles(pSet=common.clarified$CCLE, sensitivity.measure="auc_published", summary.stat="median"), 1, mad, na.rm=TRUE)[drugix]
 
 pdf(file.path(saveres, "auc_mad_vs_mad_common.pdf"), width=5, height=5)
 par(mar=c(5, 4, 1, 2) + 0.1, cex=0.8)
@@ -578,11 +568,11 @@ dev.off()
 myf <- file.path(saveres, "auc_ic50_published_recomputed.RData")
 if (!file.exists(myf)) {
   ## GDSC AUC
-  x0.gdsc <- summarizeSensitivityProfiles(pSet=GDSC, sensitivity.measure="auc_published", summary.stat="median")
-  x1.gdsc <- summarizeSensitivityProfiles(pSet=GDSC, sensitivity.measure="auc_recomputed", summary.stat="median")
+  x0.gdsc <- PharmacoGx::summarizeSensitivityProfiles(pSet=GDSC.clarified, sensitivity.measure="auc_published", summary.stat="median")
+  x1.gdsc <- PharmacoGx::summarizeSensitivityProfiles(pSet=GDSC.clarified, sensitivity.measure="auc_recomputed", summary.stat="median")
   ## GDSC IC50
-  xx0.gdsc <- summarizeSensitivityProfiles(pSet=GDSC, sensitivity.measure="ic50_published", summary.stat="median")
-  xx1.gdsc <- summarizeSensitivityProfiles(pSet=GDSC, sensitivity.measure="ic50_recomputed", summary.stat="median")
+  xx0.gdsc <- PharmacoGx::summarizeSensitivityProfiles(pSet=GDSC.clarified, sensitivity.measure="ic50_published", summary.stat="median")
+  xx1.gdsc <- summarizeSensitivityProfiles(pSet=GDSC.clarified, sensitivity.measure="ic50_recomputed", summary.stat="median")
   for (i in 1:nrow(xx0.gdsc)) {
     ## truncate ic50= and ic50=Inf by the min and max concentrations tested in each study
     ## ic50 = 0 when the drug dose-response curve starts below 50% viability
@@ -597,11 +587,11 @@ if (!file.exists(myf)) {
     xx1.gdsc[i, ] <- - log10(xx1.gdsc.i / 1000)
   }
   ## CCLE AUC
-  x0.ccle <- summarizeSensitivityProfiles(pSet=CCLE, sensitivity.measure="auc_published", summary.stat="median")
-  x1.ccle <- summarizeSensitivityProfiles(pSet=CCLE, sensitivity.measure="auc_recomputed", summary.stat="median")
+  x0.ccle <- PharmacoGx::summarizeSensitivityProfiles(pSet=CCLE.clarified, sensitivity.measure="auc_published", summary.stat="median")
+  x1.ccle <- PharmacoGx::summarizeSensitivityProfiles(pSet=CCLE.clarified, sensitivity.measure="auc_recomputed", summary.stat="median")
   ## CCLE IC50
-  xx0.ccle <- summarizeSensitivityProfiles(pSet=CCLE, sensitivity.measure="ic50_published", summary.stat="median")
-  xx1.ccle <- summarizeSensitivityProfiles(pSet=CCLE, sensitivity.measure="ic50_recomputed", summary.stat="median")
+  xx0.ccle <- PharmacoGx::summarizeSensitivityProfiles(pSet=CCLE.clarified, sensitivity.measure="ic50_published", summary.stat="median")
+  xx1.ccle <- PharmacoGx::summarizeSensitivityProfiles(pSet=CCLE.clarified, sensitivity.measure="ic50_recomputed", summary.stat="median")
   for (i in 1:nrow(xx0.ccle)) {
     ## truncate ic50= and ic50=Inf by the min and max concentrations tested in each study
     ## ic50 = 0 when the drug dose-response curve starts below 50% viability
@@ -656,69 +646,6 @@ mtext(side=3, at=par("usr")[1]-0.5, text=LETTERS[4], line=2, font=2, cex=0.8)
 
 dev.off()
 
-# #################################################
-# ### published vs recomputed drug sensitivity data
-#
-# myf <- file.path(saveres, "ic50_published_recomputed.RData")
-# if (!file.exists(myf)) {
-#   ### GDSC
-#   gdsc.auc.p <- summarizeSensitivityProfiles(pSet=GDSC, sensitivity.measure="auc_published")
-#   gdsc.auc.r <- summarizeSensitivityProfiles(pSet=GDSC, sensitivity.measure="auc_recomputed")
-#   gdsc.ic50.p <- summarizeSensitivityProfiles(pSet=GDSC, sensitivity.measure="ic50_published")
-#   gdsc.ic50.r <- summarizeSensitivityProfiles(pSet=GDSC, sensitivity.measure="ic50_recomputed")
-#   ### truncate by max concentrations
-#   mm <- apply(sensitivityInfo(GDSC)[ , grep("Dose", colnames(sensitivityInfo(GDSC))), drop=FALSE], 1, max, na.rm=TRUE)
-#   cn <- sort(unique(sensitivityInfo(GDSC)[ , "cellid"]))
-#   dn <- sort(unique(sensitivityInfo(GDSC)[ , "drugid"]))
-#   gdsc.maxconc <- array(NA, dim=dim(gdsc.ic50.p), dimnames=dimnames(gdsc.ic50.p))
-#   cn2 <- match(colnames(gdsc.maxconc), colnames(gdsc.ic50.p))
-#   cn3 <- factor(sensitivityInfo(GDSC)[ , "cellid"], levels=colnames(gdsc.ic50.p))
-#   levels(cn3) <- cn2
-#   dn2 <- match(rownames(gdsc.maxconc), rownames(gdsc.ic50.p))
-#   dn3 <- factor(sensitivityInfo(GDSC)[ , "drugid"], levels=rownames(gdsc.ic50.p))
-#   levels(dn3) <- dn2
-#   iix <- cbind(as.numeric(dn3), as.numeric(cn3))
-#   gdsc.maxconc[iix] <- mm
-#   gdsc.ic50.p <- apply(X=abind::abind(gdsc.ic50.p, gdsc.maxconc, along=3), MARGIN=c(1,2), FUN=min, na.rm=FALSE)
-#   gdsc.ic50.r <- apply(X=abind::abind(gdsc.ic50.r, gdsc.maxconc, along=3), MARGIN=c(1,2), FUN=min, na.rm=FALSE)
-#
-#   ### CCLE
-#   ccle.auc.p <- summarizeSensitivityProfiles(pSet=CCLE, sensitivity.measure="auc_published")
-#   ccle.auc.r <- summarizeSensitivityProfiles(pSet=CCLE, sensitivity.measure="auc_recomputed")
-#   ccle.ic50.p <- summarizeSensitivityProfiles(pSet=CCLE, sensitivity.measure="ic50_published")
-#   ccle.ic50.r <- summarizeSensitivityProfiles(pSet=CCLE, sensitivity.measure="ic50_recomputed")
-#   ### truncate by max concentrations
-#   mm <- apply(sensitivityInfo(CCLE)[ , grep("Dose", colnames(sensitivityInfo(CCLE))), drop=FALSE], 1, max, na.rm=TRUE)
-#   cn <- sort(unique(sensitivityInfo(CCLE)[ , "cellid"]))
-#   dn <- sort(unique(sensitivityInfo(CCLE)[ , "drugid"]))
-#   ccle.maxconc <- array(NA, dim=dim(ccle.ic50.p), dimnames=dimnames(ccle.ic50.p))
-#   cn2 <- match(colnames(ccle.maxconc), colnames(ccle.ic50.p))
-#   cn3 <- factor(sensitivityInfo(CCLE)[ , "cellid"], levels=colnames(ccle.ic50.p))
-#   levels(cn3) <- cn2
-#   dn2 <- match(rownames(ccle.maxconc), rownames(ccle.ic50.p))
-#   dn3 <- factor(sensitivityInfo(CCLE)[ , "drugid"], levels=rownames(ccle.ic50.p))
-#   levels(dn3) <- dn2
-#   iix <- cbind(as.numeric(dn3), as.numeric(cn3))
-#   ccle.maxconc[iix] <- mm
-#   ccle.ic50.p <- apply(X=abind::abind(ccle.ic50.p, ccle.maxconc, along=3), MARGIN=c(1,2), FUN=min, na.rm=FALSE)
-#   ccle.ic50.r <- apply(X=abind::abind(ccle.ic50.r, ccle.maxconc, along=3), MARGIN=c(1,2), FUN=min, na.rm=FALSE)
-#   save(list=c("gdsc.ic50.p", "gdsc.ic50.r", "ccle.ic50.p", "ccle.ic50.r", "gdsc.ic50.p", "gdsc.ic50.r", "ccle.ic50.p", "ccle.ic50.r"), compress=TRUE, file=myf)
-# } else {
-#   load(myf)
-# }
-#
-# dd <- list("GDSC.AUC.PUBLISHED"=data.frame(gdsc.auc.p), "GDSC.AUC.RECOMPUTED"=data.frame(gdsc.auc.r), "GDSC.IC50.PUBLISHED"=data.frame(gdsc.ic50.p), "GDSC.IC50.RECOMPUTED"=data.frame(gdsc.ic50.r), "CCLE.AUC.PUBLISHED"=data.frame(ccle.auc.p), "CCLE.AUC.RECOMPUTED"=data.frame(ccle.auc.r), "CCLE.IC50.PUBLISHED"=data.frame(ccle.ic50.p), "CCLE.IC50.RECOMPUTED"=data.frame(ccle.ic50.r))
-# WriteXLS::WriteXLS(x="dd", ExcelFileName=file.path(saveres, "ic50_published_recomputed.xlsx"))
-#
-# pdf(file.path(saveres, "sensitivity_published_recomputed.pdf"), height=10, width=10)
-# par(mfrow=c(2,2))
-# myScatterPlot(x=as.numeric(gdsc.auc.p), y=as.numeric(gdsc.auc.r), method="transparent", transparency=0.1, xlab="Published AUC in GDSC", ylab="Recomputed AUC in GDSC", xlim=c(0,1), ylim=c(0,1), main="Published vs. recomputed AUC values in GDSC")
-# myScatterPlot(x=as.numeric(ccle.auc.p), y=as.numeric(ccle.auc.r), method="transparent", transparency=0.1, xlab="Published AUC in CCLE", ylab="Recomputed AUC in CCLE", xlim=c(0,1), ylim=c(0,1), main="Published vs. recomputed AUC values in CC:E")
-# myScatterPlot(x=as.numeric(gdsc.ic50.p), y=as.numeric(gdsc.ic50.r), method="transparent", transparency=0.1, xlab="Published AUC in GDSC", ylab="Recomputed AUC in GDSC", xlim=c(0,1), ylim=c(0,1), main="Published vs. recomputed AUC values in GDSC")
-# myScatterPlot(x=as.numeric(ccle.ic50.p), y=as.numeric(ccle.ic50.r), method="transparent", transparency=0.1, xlab="Published AUC in CCLE", ylab="Recomputed AUC in CCLE", xlim=c(0,1), ylim=c(0,1), main="Published vs. recomputed AUC values in CCLE")
-# dev.off()
-
-
 ################################################
 ## consistency statistics per drug
 ################################################
@@ -729,8 +656,8 @@ consisn <- NULL
 ## AUC as published
 ########################
 
-auc.gdsc.common <- summarizeSensitivityProfiles(pSet=common$GDSC, sensitivity.measure="auc_published", summary.stat="median")
-auc.ccle.common <- summarizeSensitivityProfiles(pSet=common$CCLE, sensitivity.measure="auc_published", summary.stat="median")
+auc.gdsc.common <- PharmacoGx::summarizeSensitivityProfiles(pSet=common.clarified$GDSC, sensitivity.measure="auc_published", summary.stat="median")
+auc.ccle.common <- PharmacoGx::summarizeSensitivityProfiles(pSet=common.clarified$CCLE, sensitivity.measure="auc_published", summary.stat="median")
 
 ## compute consistency for auc published
 myf <- file.path(saveres, sprintf("auc_%s_consistency.RData", "published"))
@@ -786,13 +713,9 @@ xtable::print.xtable(xtable::xtable(xt, digits=2), include.rownames=TRUE, floati
 ## AUC recomputed
 ########################
 
-auc.gdsc.common <- summarizeSensitivityProfiles(pSet=common$GDSC, sensitivity.measure="auc_recomputed", summary.stat="median")
-auc.ccle.common <- summarizeSensitivityProfiles(pSet=common$CCLE, sensitivity.measure="auc_recomputed", summary.stat="median")
+auc.gdsc.common <- summarizeSensitivityProfiles(pSet=common.clarified$GDSC, sensitivity.measure="auc_recomputed", summary.stat="median")
+auc.ccle.common <- summarizeSensitivityProfiles(pSet=common.clarified$CCLE, sensitivity.measure="auc_recomputed", summary.stat="median")
 
-rna.gdsc.common.bin <- factor(ifelse(rna.gdsc.common[i, ] > cc, "high", "low"), levels=c("low","high"))
-cc <- cutoff.rna.ccle
-rna.ccle.common.bin <- factor(ifelse(rna.ccle.common[i, ] > cc, "high", "low"), levels=c("low","high"))
-    
 myf <- file.path(saveres, sprintf("auc_%s_consistency.RData", "recomputed"))
 if (!file.exists(myf)) {
   consis <- computeConsistencySensitivity(x=auc.gdsc.common, y=auc.ccle.common, type="auc", drugs=drug.cytotoxic, cutoff=auc.cutoff, cutoff.cytotoxic=auc.cytotoxic.cutoff)
@@ -837,9 +760,10 @@ xtable::print.xtable(xtable::xtable(xt, digits=2), include.rownames=TRUE, floati
 ########################
 ## AUC recomputed star
 ########################
+common.star <- PharmacoGx::intersectPSet(pSets = list("CCLE"=CCLE, "GDSC"=GDSC), intersectOn = c("cell.lines", "drugs", "concentrations"), strictIntersect=TRUE)
 
-auc.gdsc.common <- summarizeSensitivityProfiles(pSet=common$GDSC, sensitivity.measure="auc_recomputed_star", summary.stat="median")
-auc.ccle.common <- summarizeSensitivityProfiles(pSet=common$CCLE, sensitivity.measure="auc_recomputed_star", summary.stat="median")
+auc.gdsc.common <- summarizeSensitivityProfiles(pSet=common.star$GDSC, sensitivity.measure="auc_recomputed", summary.stat="median")
+auc.ccle.common <- summarizeSensitivityProfiles(pSet=common.star$CCLE, sensitivity.measure="auc_recomputed", summary.stat="median")
 
 ## compute consistency for auc star
 myf <- file.path(saveres, sprintf("auc_%s_consistency.RData", "star"))
@@ -936,8 +860,8 @@ dev.off()
 ## IC50 as published
 ########################
 
-ic50.gdsc.common <- summarizeSensitivityProfiles(pSet=common$GDSC, sensitivity.measure="ic50_published", summary.stat="median")
-ic50.ccle.common <- summarizeSensitivityProfiles(pSet=common$CCLE, sensitivity.measure="ic50_published", summary.stat="median")
+ic50.gdsc.common <- summarizeSensitivityProfiles(pSet=common.clarified$GDSC, sensitivity.measure="ic50_published", summary.stat="median")
+ic50.ccle.common <- summarizeSensitivityProfiles(pSet=common.clarified$CCLE, sensitivity.measure="ic50_published", summary.stat="median")
 
 ## compute consistency for ic50 published
 myf <- file.path(saveres, sprintf("ic50_%s_consistency.RData", "published"))
@@ -998,8 +922,8 @@ xtable::print.xtable(xtable::xtable(xt, digits=2), include.rownames=TRUE, floati
 ## IC50 recomputed
 ########################
 
-ic50.gdsc.common <- summarizeSensitivityProfiles(pSet=common$GDSC, sensitivity.measure="ic50_recomputed", summary.stat="median")
-ic50.ccle.common <- summarizeSensitivityProfiles(pSet=common$CCLE, sensitivity.measure="ic50_recomputed", summary.stat="median")
+ic50.gdsc.common <- summarizeSensitivityProfiles(pSet=common.clarified$GDSC, sensitivity.measure="ic50_recomputed", summary.stat="median")
+ic50.ccle.common <- summarizeSensitivityProfiles(pSet=common.clarified$CCLE, sensitivity.measure="ic50_recomputed", summary.stat="median")
 
 ## compute consistency for ic50 recomputed
 myf <- file.path(saveres, sprintf("ic50_%s_consistency.RData", "recomputed"))
@@ -1109,8 +1033,8 @@ consisn2 <- NULL
 
 myf <- file.path(saveres, sprintf("rna_common.RData"))
 if (!file.exists(myf)) {
-  rna.gdsc.common <- exprs(summarizeMolecularProfiles(pSet=common$GDSC, mDataType="rna2", summary.stat="median"))
-  rna.ccle.common <- exprs(summarizeMolecularProfiles(pSet=common$CCLE, mDataType="rna", summary.stat="median"))
+  rna.gdsc.common <- exprs(summarizeMolecularProfiles(pSet=common.clarified$GDSC, mDataType="rna2", summary.stat="median"))
+  rna.ccle.common <- exprs(summarizeMolecularProfiles(pSet=common.clarified$CCLE, mDataType="rna", summary.stat="median"))
   ## common genes
   gix <- intersect(rownames(rna.gdsc.common), rownames(rna.ccle.common))
   rna.gdsc.common <- rna.gdsc.common[gix, ]
@@ -1206,8 +1130,8 @@ rna.consistency <- consis
 myf <- file.path(saveres, sprintf("rnaseq_common.RData"))
 if (!file.exists(myf)) {
   ## gene expression data from CCLE
-  rna.ccle.common <- exprs(summarizeMolecularProfiles(pSet=CCLE, mDataType="rna", summary.stat="median"))
-  rnaseq.ccle.common <- exprs(summarizeMolecularProfiles(pSet=CCLE, mDataType="rnaseq", summary.stat="median"))
+  rna.ccle.common <- exprs(summarizeMolecularProfiles(pSet=CCLE.clarified, mDataType="rna", summary.stat="median"))
+  rnaseq.ccle.common <- exprs(summarizeMolecularProfiles(pSet=CCLE.clarified, mDataType="rnaseq", summary.stat="median"))
   ## common genes
   gix <- intersect(rownames(rna.ccle.common), rownames(rnaseq.ccle.common))
   rna.ccle.common <- rna.ccle.common[gix, ]
@@ -1230,6 +1154,8 @@ if (!file.exists(myf)) {
     rnaseq.ccle.common.bin <- factor(ifelse(rnaseq.ccle.common[i, ] > cc, "high", "low"), levels=c("low","high"))
     cc <- cutoff.rna.ccle
     rna.ccle.common.bin <- factor(ifelse(rna.ccle.common[i, ] > cc, "high", "low"), levels=c("low","high"))
+    cc <- cutoff.rna.gdsc
+    rna.gdsc.common.bin <- factor(ifelse(rna.gdsc.common[i, ] > cc, "high", "low"), levels=c("low","high"))
     ## consistency measures
     iix <- !(is.na(rnaseq.ccle.common.bin) | is.na(rna.ccle.common.bin)) & !(rnaseq.ccle.common.bin == "low" & rna.ccle.common.bin == "low")
     ccix <- complete.cases(rnaseq.ccle.common[i, ], rna.ccle.common[i, ])
@@ -1264,7 +1190,7 @@ if (!file.exists(myf)) {
       consis[i, "dxy.high", ] <- c((res$estimate - 0.5) * 2, res$p)
     }
     ## cosine
-    res <- try(PharmacoGx::PharmacoGx::cosinePerm(x=rnaseq.ccle.common[i, ccix] - cutoff.rnaseq.ccle, y=rna.ccle.common[i, ccix] - cutoff.rna.ccle, nperm=0, nthread=nbcore, alternative="greater"), silent=TRUE)
+    res <- try(PharmacoGx::cosinePerm(x=rnaseq.ccle.common[i, ccix] - cutoff.rnaseq.ccle, y=rna.ccle.common[i, ccix] - cutoff.rna.ccle, nperm=0, nthread=nbcore, alternative="greater"), silent=TRUE)
     if (class(res) != "try-error") {
       consis[i, "cosine", ] <- c(res$estimate, res$p.value)
     }
@@ -1306,8 +1232,8 @@ rnaseq.consistency <- consis
 
 myf <- file.path(saveres, sprintf("rna_rnaseq_common.RData"))
 if (!file.exists(myf)) {
-  rna.gdsc.common <- exprs(summarizeMolecularProfiles(pSet=common$GDSC, mDataType="rna2", summary.stat="median"))
-  rnaseq.ccle.common <- exprs(summarizeMolecularProfiles(pSet=common$CCLE, mDataType="rnaseq", summary.stat="median"))
+  rna.gdsc.common <- exprs(summarizeMolecularProfiles(pSet=common.clarified$GDSC, mDataType="rna2", summary.stat="median"))
+  rnaseq.ccle.common <- exprs(summarizeMolecularProfiles(pSet=common.clarified$CCLE, mDataType="rnaseq", summary.stat="median"))
   ## common genes
   gix <- intersect(rownames(rna.gdsc.common), rownames(rnaseq.ccle.common))
   rna.gdsc.common <- rna.gdsc.common[gix, ]
@@ -1407,8 +1333,8 @@ rna.rnaseq.consistency <- consis
   
 myf <- file.path(saveres, sprintf("cnv_common.RData"))
 if (!file.exists(myf)) {
-  cnv.gdsc.common <- exprs(summarizeMolecularProfiles(pSet=common$GDSC, mDataType="cnv", summary.stat="median"))
-  cnv.ccle.common <- exprs(summarizeMolecularProfiles(pSet=common$CCLE, mDataType="cnv", summary.stat="median"))
+  cnv.gdsc.common <- exprs(summarizeMolecularProfiles(pSet=common.clarified$GDSC, mDataType="cnv", summary.stat="median"))
+  cnv.ccle.common <- exprs(summarizeMolecularProfiles(pSet=common.clarified$CCLE, mDataType="cnv", summary.stat="median"))
   ## common genes
   gix <- intersect(rownames(cnv.gdsc.common), rownames(cnv.ccle.common))
   cnv.gdsc.common <- cnv.gdsc.common[gix, ]
@@ -1510,16 +1436,16 @@ consisn2 <- c(consisn2, list("CNV"=data.frame(consis[ , , "estimate"], check.nam
 cnv.consistency <- consis
 
 ################################################
-## consistency of cnv profiles
+## consistency of mutation profiles
 ################################################
   
 myf <- file.path(saveres, sprintf("mutation_common.RData"))
 if (!file.exists(myf)) {
-  mut.gdsc.common <- exprs(summarizeMolecularProfiles(pSet=common$GDSC, mDataType="mutation", summary.stat="or"))
+  mut.gdsc.common <- exprs(summarizeMolecularProfiles(pSet=common.clarified$GDSC, mDataType="mutation", summary.stat="or"))
   nn <- dimnames(mut.gdsc.common)
   mut.gdsc.common <- apply(mut.gdsc.common, 2, as.numeric)
   dimnames(mut.gdsc.common) <- nn
-  mut.ccle.common <- exprs(summarizeMolecularProfiles(pSet=common$CCLE, mDataType="mutation", summary.stat="or"))
+  mut.ccle.common <- exprs(summarizeMolecularProfiles(pSet=common.clarified$CCLE, mDataType="mutation", summary.stat="or"))
   nn <- dimnames(mut.ccle.common)
   mut.ccle.common <- apply(mut.ccle.common, 2, as.numeric)
   dimnames(mut.ccle.common) <- nn
@@ -1671,12 +1597,24 @@ WriteXLS::WriteXLS(x="pp", ExcelFileName=file.path(saveres, "significance_consis
 load(file.path(saveres, "PSets","signatures_data.RData"))
 load(file.path(saveres, "PSets", "GDSC_clarified.RData"))
 load(file.path(saveres, "PSets", "CCLE_clarified.RData"))
+load(file.path(saveres, "PSets", "common_clarified.RData"))
 
-myf <- file.path(saveres, "PSets", "Sigs", "common_ccle_sig_rna.RData")
+myf <- file.path(saveres, "PSets", "Sigs", "gdsc_sig_rna2.RData")
 if(!file.exists(myf))
 {
-  common.ccle.sig.rna <- drugSensitivitySig(pSet=common.clarified$CCLE, mDataType="rna", drugs=drugs, features=features,sensitivity.measure="ic50_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
-  save(common.ccle.sig.rna, file=myf)
+  gdsc.sig.rna2 <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="rna2", drugs=drugs, features=features, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
+  
+  save(gdsc.sig.rna2, file=myf)
+}else{
+  load(myf)
+}
+
+myf <- file.path(saveres, "PSets", "Sigs", "gdsc_sig_rna2_binary.RData")
+if(!file.exists(myf))
+{
+  gdsc.sig.rna2.bin <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="rna2", drugs=drugs, features=features, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4, sensitivity.cutoff=0.2)
+  
+  save(gdsc.sig.rna2.bin, file=myf)
 }else{
   load(myf)
 }
@@ -1684,106 +1622,28 @@ if(!file.exists(myf))
 myf <- file.path(saveres, "PSets", "Sigs", "common_gdsc_sig_rna2.RData")
 if(!file.exists(myf))
 {
-  common.gdsc.sig.rna2 <- drugSensitivitySig(pSet=common.clarified$GDSC, mDataType="rna2", drugs=drugs, features=features, sensitivity.measure="ic50_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
+  common.gdsc.sig.rna2 <- drugSensitivitySig(pSet=common.clarified$GDSC, mDataType="rna2", drugs=drugs, features=features, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
   save(common.gdsc.sig.rna2, file=myf)
   
 }else{
   load(myf)
 }
 
-continuous.common <- biomarkers.validation(ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2, cell="common", method="continuous", drugs=drugs, fdr.cut.off=0.05, nperm=100)
-plotValidation(validation.result=continuous.common, method="continuous", cell="common")
-continuous.common.100 <- biomarkers.validation(ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2, cell="common", method="continuous", drugs=drugs, fdr.cut.off=0.05, nperm=100, top.ranked=100)
-plotValidation(validation.result=continuous.common.100, method="continuous_top100", cell="common")
-
-
 myf <- file.path(saveres, "PSets", "Sigs", "common_gdsc_sig_rna2_binary.RData")
 if(!file.exists(myf))
 {
-  common.gdsc.sig.rna2.bin <- drugSensitivitySig(pSet=common.clarified$GDSC, mDataType="rna2", drugs=drugs, features=features, sensitivity.measure="ic50_published", molecular.summary.stat="median", sensitivity.summary.stat="median", sensitivity.cutoff=0.2, nthread=4)
+  common.gdsc.sig.rna2.bin <- drugSensitivitySig(pSet=common.clarified$GDSC, mDataType="rna2", drugs=drugs, features=features, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", sensitivity.cutoff=0.2, nthread=4)
   save(common.gdsc.sig.rna2.bin, file=myf)
   
 }else{
   load(myf)
 }
-myf <- file.path(saveres, "PSets", "Sigs", "common_ccle_sig_rna_binary.RData")
-if(!file.exists(myf))
-{
-  common.ccle.sig.rna.bin <- drugSensitivitySig(pSet=common.clarified$CCLE, mDataType="rna", drugs=drugs, features=features, sensitivity.measure="ic50_published", molecular.summary.stat="median", sensitivity.summary.stat="median", sensitivity.cutoff=0.2, nthread=4)
-  save(common.ccle.sig.rna.bin, file=myf)
-}else{
-  load(myf)
-}
-
-
-
-binary.commom <- biomarkers.validation(ccle.sig.rna=common.ccle.sig.rna.bin, gdsc.sig.rna=common.gdsc.sig.rna2.bin, cell="common", method="binary", drugs=drugs, fdr.cut.off=0.05, nperm=100)
-plotValidation(validation.result=binary.commom, method="binary", cell="common")
-binary.commom.100 <- biomarkers.validation(ccle.sig.rna=common.ccle.sig.rna.bin, gdsc.sig.rna=common.gdsc.sig.rna2.bin, cell="common", method="binary", drugs=drugs, fdr.cut.off=0.05, nperm=100, top.ranked=100)
-plotValidation(validation.result=binary.commom.100, method="binary_top100", cell="common")
-
-
-test <- wilcox.test(continuous.common.100$validation, binary.commom.100$validation, alternative="greater", paired=TRUE)
-test$p.value
-
-
-load(file.path(saveres, "PSets", "GDSC_clarified.RData"))
-load(file.path(saveres, "PSets", "CCLE_clarified.RData"))
-load(file.path(saveres, "signatures_data.RData"))
 
 myf <- file.path(saveres, "PSets", "Sigs", "ccle_sig_rna.RData")
 if(!file.exists(myf))
 {
-  ccle.sig.rna <- drugSensitivitySig(pSet=CCLE.clarified, mDataType="rna", drugs=drugs, features=features, sensitivity.measure="ic50_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
+  ccle.sig.rna <- drugSensitivitySig(pSet=CCLE.clarified, mDataType="rna", drugs=drugs, features=features, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
   save(ccle.sig.rna, file=myf)
-}else{
-  load(myf)
-}
-
-
-myf <- file.path(saveres, "PSets", "Sigs", "gdsc_sig_rna2.RData")
-if(!file.exists(myf))
-{
-  gdsc.sig.rna2 <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="rna2", drugs=drugs, features=features, sensitivity.measure="ic50_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
-  
-  save(gdsc.sig.rna2, file=myf)
-}else{
-  load(myf)
-}
-
-cnv.fetures <- intersect(rownames(fData(CCLE@molecularProfiles$cnv)), rownames(fData(GDSC@molecularProfiles$cnv)))
-
-myf <- file.path(saveres, "PSets", "Sigs", "gdsc_sig_cnv.RData")
-if(!file.exists(myf))
-{
-  
-  gdsc.sig.cnv <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="cnv", drugs=drugs, features=cnv.fetures, sensitivity.measure="ic50_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
-  save(gdsc.sig.cnv, file=myf)
-}else{
-  load(myf)
-}
-
-myf <- file.path(saveres, "PSets", "Sigs", "ccle_sig_cnv.RData")
-if(!file.exists(myf))
-{
-  ccle.sig.cnv <- drugSensitivitySig(pSet=CCLE.clarified, mDataType="cnv", drugs=drugs, features=cnv.fetures, sensitivity.measure="ic50_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
-  save(ccle.sig.cnv, file=myf)
-} else{
-  load(myf)
-}
-continuous.all <- biomarkers.validation(ccle.sig.rna=ccle.sig.rna, gdsc.sig.rna=gdsc.sig.rna2, cell="all", method="continuous", drugs=drugs, fdr.cut.off=0.05, nperm=100)
-plotValidation(validation.result=continuous.all, method="continuous", cell="all")
-continuous.all.100 <- biomarkers.validation(ccle.sig.rna=ccle.sig.rna, gdsc.sig.rna=gdsc.sig.rna2, cell="all", method="continuous", drugs=drugs, fdr.cut.off=0.05, nperm=100, top.ranked=100)
-plotValidation(validation.result=continuous.all.100, method="continuous_top100", cell="all")
-
-
-
-myf <- file.path(saveres, "PSets", "Sigs", "gdsc_sig_rna2_binary.RData")
-if(!file.exists(myf))
-{
-  gdsc.sig.rna2.bin <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="rna2", drugs=drugs, features=features, sensitivity.measure="ic50_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4, sensitivity.cutoff=0.2)
-  
-  save(gdsc.sig.rna2.bin, file=myf)
 }else{
   load(myf)
 }
@@ -1791,11 +1651,34 @@ if(!file.exists(myf))
 myf <- file.path(saveres, "PSets", "Sigs", "ccle_sig_rna_binary.RData")
 if(!file.exists(myf))
 {
-  ccle.sig.rna.bin <- drugSensitivitySig(pSet=CCLE.clarified, mDataType="rna", drugs=drugs, features=features, sensitivity.measure="ic50_published", molecular.summary.stat="median", sensitivity.summary.stat="median", sensitivity.cutoff=0.2, nthread=4)
+  ccle.sig.rna.bin <- drugSensitivitySig(pSet=CCLE.clarified, mDataType="rna", drugs=drugs, features=features[1:20], sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", sensitivity.cutoff=0.2, nthread=4)
   save(ccle.sig.rna.bin, file=myf)
 }else{
   load(myf)
 }
+
+myf <- file.path(saveres, "PSets", "Sigs", "common_ccle_sig_rna.RData")
+if(!file.exists(myf))
+{
+  common.ccle.sig.rna <- drugSensitivitySig(pSet=common.clarified$CCLE, mDataType="rna", drugs=drugs, features=features,sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
+  save(common.ccle.sig.rna, file=myf)
+}else{
+  load(myf)
+}
+
+myf <- file.path(saveres, "PSets", "Sigs", "common_ccle_sig_rna_binary.RData")
+if(!file.exists(myf))
+{
+  common.ccle.sig.rna.bin <- drugSensitivitySig(pSet=common.clarified$CCLE, mDataType="rna", drugs=drugs, features=features, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", sensitivity.cutoff=0.2, nthread=4)
+  save(common.ccle.sig.rna.bin, file=myf)
+}else{
+  load(myf)
+}
+
+continuous.all <- biomarkers.validation(ccle.sig.rna=ccle.sig.rna, gdsc.sig.rna=gdsc.sig.rna2, cell="all", method="continuous", drugs=drugs, fdr.cut.off=0.05, nperm=100)
+plotValidation(validation.result=continuous.all, method="continuous", cell="all")
+continuous.all.100 <- biomarkers.validation(ccle.sig.rna=ccle.sig.rna, gdsc.sig.rna=gdsc.sig.rna2, cell="all", method="continuous", drugs=drugs, fdr.cut.off=0.05, nperm=100, top.ranked=100)
+plotValidation(validation.result=continuous.all.100, method="continuous_top100", cell="all")
 
 binary.all <- biomarkers.validation(ccle.sig.rna=ccle.sig.rna.bin, gdsc.sig.rna=gdsc.sig.rna2.bin, cell="all", method="binary", drugs=drugs, fdr.cut.off=0.05, nperm=100)
 plotValidation(validation.result=binary.all, method="binary", cell="all")
@@ -1810,10 +1693,108 @@ test$p.value
 test <- wilcox.test(continuous.all.100$validation, continuous.common.100$validation, alternative="greater", paired=TRUE)
 test$p.value
 
+continuous.common <- biomarkers.validation(ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2, cell="common", method="continuous", drugs=drugs, fdr.cut.off=0.05, nperm=100)
+plotValidation(validation.result=continuous.common, method="continuous", cell="common")
+continuous.common.100 <- biomarkers.validation(ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2, cell="common", method="continuous", drugs=drugs, fdr.cut.off=0.05, nperm=100, top.ranked=100)
+plotValidation(validation.result=continuous.common.100, method="continuous_top100", cell="common")
+
+
+binary.commom <- biomarkers.validation(ccle.sig.rna=common.ccle.sig.rna.bin, gdsc.sig.rna=common.gdsc.sig.rna2.bin, cell="common", method="binary", drugs=drugs, fdr.cut.off=0.05, nperm=100)
+plotValidation(validation.result=binary.commom, method="binary", cell="common")
+binary.commom.100 <- biomarkers.validation(ccle.sig.rna=common.ccle.sig.rna.bin, gdsc.sig.rna=common.gdsc.sig.rna2.bin, cell="common", method="binary", drugs=drugs, fdr.cut.off=0.05, nperm=100, top.ranked=100)
+plotValidation(validation.result=binary.commom.100, method="binary_top100", cell="common")
+
+
+test <- wilcox.test(continuous.common.100$validation, binary.commom.100$validation, alternative="greater", paired=TRUE)
+test$p.value
+
+
+
+cnv.fetures <- intersect(rownames(fData(CCLE.clarified@molecularProfiles$cnv)), rownames(fData(GDSC.clarified@molecularProfiles$cnv)))
+
+myf <- file.path(saveres, "PSets", "Sigs", "gdsc_sig_cnv.RData")
+if(!file.exists(myf))
+{
+  
+  gdsc.sig.cnv <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="cnv", drugs=drugs, features=cnv.fetures, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
+  save(gdsc.sig.cnv, file=myf)
+}else{
+  load(myf)
+}
+
+myf <- file.path(saveres, "PSets", "Sigs", "gdsc_sig_cnv_binary.RData")
+if(!file.exists(myf))
+{
+  
+  gdsc.sig.cnv.bin <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="cnv", drugs=drugs, features=cnv.fetures, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4, sensitivity.cutoff=0.2)
+  save(gdsc.sig.cnv.bin, file=myf)
+}else{
+  load(myf)
+}
+
+myf <- file.path(saveres, "PSets", "Sigs", "common_gdsc_sig_cnv.RData")
+if(!file.exists(myf))
+{
+  
+  common.gdsc.sig.cnv <- drugSensitivitySig(pSet=common.clarified$GDSC, mDataType="cnv", drugs=drugs, features=cnv.fetures, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
+  save(common.gdsc.sig.cnv, file=myf)
+}else{
+  load(myf)
+}
+
+myf <- file.path(saveres, "PSets", "Sigs", "common_gdsc_sig_cnv_binary.RData")
+if(!file.exists(myf))
+{
+  
+  common.gdsc.sig.cnv.bin <- drugSensitivitySig(pSet=common.clarified$GDSC, mDataType="cnv", drugs=drugs, features=cnv.fetures, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4, sensitivity.cutoff=0.2)
+  save(common.gdsc.sig.cnv.bin, file=myf)
+}else{
+  load(myf)
+}
+
+myf <- file.path(saveres, "PSets", "Sigs", "ccle_sig_cnv.RData")
+if(!file.exists(myf))
+{
+  ccle.sig.cnv <- drugSensitivitySig(pSet=CCLE.clarified, mDataType="cnv", drugs=drugs, features=cnv.fetures, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
+  save(ccle.sig.cnv, file=myf)
+} else{
+  load(myf)
+}
+
+myf <- file.path(saveres, "PSets", "Sigs", "ccle_sig_cnv_binary.RData")
+if(!file.exists(myf))
+{
+  ccle.sig.cnv.bin <- drugSensitivitySig(pSet=CCLE.clarified, mDataType="cnv", drugs=drugs, features=cnv.fetures, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4, sensitivity.cutoff=0.2)
+  save(ccle.sig.cnv.bin, file=myf)
+} else{
+  load(myf)
+}
+
+myf <- file.path("PSets", "Sigs", "common_ccle_sig_cnv.RData")
+if(!file.exists(myf))
+{
+  
+  common.ccle.sig.cnv <- drugSensitivitySig(pSet=common.clarified$CCLE, mDataType="cnv", drugs=drugs, features=cnv.fetures, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
+  save(common.ccle.sig.cnv, file=myf)
+}else{
+  load(myf)
+}
+
+myf <- file.path("PSets", "Sigs", "common_ccle_sig_cnv_binary.RData")
+if(!file.exists(myf))
+{
+  
+  common.ccle.sig.cnv.bin <- drugSensitivitySig(pSet=common.clarified$CCLE, mDataType="cnv", drugs=drugs, features=cnv.fetures, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4, sensitivity.cutoff=0.2)
+  save(common.ccle.sig.cnv.bin, file=myf)
+}else{
+  load(myf)
+}
+
+
 myf <- file.path(saveres, "PSets", "Sigs", "gdsc_mutation.RData")
 if(!file.exists(myf))
 {
-  gdsc.sig.mutation <- drugSensitivitySig(pSet=GDSC, mDataType="mutation", sensitivity.measure="ic50_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4)
+  gdsc.sig.mutation <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="mutation", sensitivity.measure="auc_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4)
   
   save(gdsc.sig.rna2.bin, file=myf)
 }else{
@@ -1828,19 +1809,78 @@ features.mutation <- intersect(features.mutation.ccle, features.mutation.gdsc)
 myf <- file.path(saveres, "PSets", "Sigs", "gdsc_sig_mutation.RData")
 if(!file.exists(myf))
 {
-  gdsc.sig.mutation <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="mutation", drugs=drugs, features=features.mutation, sensitivity.measure="ic50_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4)
+  gdsc.sig.mutation <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="mutation", drugs=drugs, features=features.mutation, sensitivity.measure="auc_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4)
   
   save(gdsc.sig.mutation, file=myf)
 }else{
   load(myf)
 }
 
+myf <- file.path(saveres, "PSets", "Sigs", "gdsc_sig_mutation_binary.RData")
+if(!file.exists(myf))
+{
+  gdsc.sig.mutation.bin <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="mutation", drugs=drugs, features=features.mutation, sensitivity.measure="auc_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4, sensitivity.cutoff=0.2)
+  
+  save(gdsc.sig.mutation.bin, file=myf)
+}else{
+  load(myf)
+}
+
+myf <- file.path(saveres, "PSets", "Sigs", "common_gdsc_sig_mutation.RData")
+if(!file.exists(myf))
+{
+  common.gdsc.sig.mutation <- drugSensitivitySig(pSet=common.clarified$GDSC, mDataType="mutation", drugs=drugs, features=features.mutation, sensitivity.measure="auc_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4)
+  
+  save(common.gdsc.sig.mutation, file=myf)
+}else{
+  load(myf)
+}
+
+myf <- file.path(saveres, "PSets", "Sigs", "common_gdsc_sig_mutation_binary.RData")
+if(!file.exists(myf))
+{
+  common.gdsc.sig.mutation.bin <- drugSensitivitySig(pSet=common.clarified$GDSC, mDataType="mutation", drugs=drugs, features=features.mutation, sensitivity.measure="auc_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4, sensitivity.cutoff=0.2)
+  
+  save(common.gdsc.sig.mutation.bin, file=myf)
+}else{
+  load(myf)
+}
 myf <- file.path(saveres, "PSets", "Sigs", "ccle_sig_mutation.RData")
 if(!file.exists(myf))
 {
-  ccle.sig.mutation <- drugSensitivitySig(pSet=CCLE.clarified, mDataType="mutation", drugs=drugs, features=features.mutation, sensitivity.measure="ic50_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4)
+  ccle.sig.mutation <- drugSensitivitySig(pSet=CCLE.clarified, mDataType="mutation", drugs=drugs, features=features.mutation, sensitivity.measure="auc_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4)
   
   save(ccle.sig.mutation, file=myf)
+}else{
+  load(myf)
+}
+
+myf <- file.path(saveres, "PSets", "Sigs", "ccle_sig_mutation_binary.RData")
+if(!file.exists(myf))
+{
+  ccle.sig.mutation.bin <- drugSensitivitySig(pSet=CCLE.clarified, mDataType="mutation", drugs=drugs, features=features.mutation, sensitivity.measure="auc_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4, sensitivity.cutoff=0.2)
+  
+  save(ccle.sig.mutation.bin, file=myf)
+}else{
+  load(myf)
+}
+
+myf <- file.path(saveres, "PSets", "Sigs", "common_ccle_sig_mutation.RData")
+if(!file.exists(myf))
+{
+  common.ccle.sig.mutation <- drugSensitivitySig(pSet=common.clarified$CCLE, mDataType="mutation", drugs=drugs, features=features.mutation, sensitivity.measure="auc_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4)
+  
+  save(common.ccle.sig.mutation, file=myf)
+}else{
+  load(myf)
+}
+
+myf <- file.path(saveres, "PSets", "Sigs", "common_ccle_sig_mutation_binary.RData")
+if(!file.exists(myf))
+{
+  common.ccle.sig.mutation.bin <- drugSensitivitySig(pSet=common.clarified$CCLE, mDataType="mutation", drugs=drugs, features=features.mutation, sensitivity.measure="auc_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4, sensitivity.cutoff=0.2)
+  
+  save(common.ccle.sig.mutation.bin, file=myf)
 }else{
   load(myf)
 }
@@ -1848,7 +1888,7 @@ if(!file.exists(myf))
 myf <- file.path(saveres, "PSets", "Sigs", "gdsc_sig_fusion.RData")
 if(!file.exists(myf))
 {
-  gdsc.sig.fusion <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="fusion", drugs=drugs, sensitivity.measure="ic50_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4)
+  gdsc.sig.fusion <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="fusion", drugs=drugs, sensitivity.measure="auc_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4)
   
   save(gdsc.sig.fusion, file=myf)
 }else{
@@ -1915,13 +1955,40 @@ drugBasedBiomarkers(ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.s
 drugBasedBiomarkers(ccle.sig.rna=ccle.sig.mutation, gdsc.sig.rna=gdsc.sig.mutation, cell="mutation", method="continuous", drugs=drugs, features=features.mutation, cut.off=0.05)
 drugBasedBiomarkers(ccle.sig.rna=ccle.sig.cnv, gdsc.sig.rna=gdsc.sig.cnv, cell="cnv", method="continuous", drugs=drugs, features=cnv.fetures, cut.off=0.05)
 
+##all continuous
+all.types.biomarkers <- integrateDrugBasedBiomarkers(method="continuous_all", drugs=drugs, cut.off=0.05, ccle.sig.rna=ccle.sig.rna, gdsc.sig.rna=gdsc.sig.rna2, ccle.sig.cnv=ccle.sig.cnv, gdsc.sig.cnv=gdsc.sig.cnv, ccle.sig.mutation=ccle.sig.mutation, gdsc.sig.mutation=gdsc.sig.mutation)
 
-all.types.biomarkers <- integrateDrugBasedBiomarkers(method="continuous", drugs=drugs, cut.off=0.05)
+integrateEstimatesScatterplot(biomarkers=all.types.biomarkers, method="continuous_all", drugs=drugs, fdr.cut.off=0.05)
 
-integrateEstimatesScatterplot(biomarkers=all.types.biomarkers, method="continuous", drugs=drugs, fdr.cut.off=0.05)
+fdrBarplot(biomarkers=all.types.biomarkers, method="continuous_all", drugs=drugs)
+integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="continuous_all", drugs=drugs, fdr.cut.off=0.05, nperm=100)
+plotValidation(validation.result=integrate.all.validation, method="integrate_continuous", cell="all")
 
-fdrBarplot(biomarkers=all.types.biomarkers, method="continuous", drugs=drugs)
-integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="continuous", drugs=drugs, fdr.cut.off=0.05, nperm=100)
-plotValidation(validation.result=integrate.all.validation, method="integrate", cell="all")
+##common continuous
+all.types.biomarkers <- integrateDrugBasedBiomarkers(method="continuous_common", drugs=drugs, cut.off=0.05, ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2, ccle.sig.cnv=common.ccle.sig.cnv, gdsc.sig.cnv=common.gdsc.sig.cnv, ccle.sig.mutation=common.ccle.sig.mutation, gdsc.sig.mutation=common.gdsc.sig.mutation)
 
+integrateEstimatesScatterplot(biomarkers=all.types.biomarkers, method="continuous_common", drugs=drugs, fdr.cut.off=0.05)
+
+fdrBarplot(biomarkers=all.types.biomarkers, method="continuous_common", drugs=drugs)
+integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="continuous_common", drugs=drugs, fdr.cut.off=0.05, nperm=100)
+plotValidation(validation.result=integrate.all.validation, method="integrate_continuous", cell="common")
+
+
+##all binary
+all.types.biomarkers <- integrateDrugBasedBiomarkers(method="binary_all", drugs=drugs, cut.off=0.05, ccle.sig.rna=ccle.sig.rna.bin, gdsc.sig.rna=gdsc.sig.rna2.bin, ccle.sig.cnv=ccle.sig.cnv.bin, gdsc.sig.cnv=gdsc.sig.cnv.bin, ccle.sig.mutation=ccle.sig.mutation.bin, gdsc.sig.mutation=gdsc.sig.mutation.bin)
+
+integrateEstimatesScatterplot(biomarkers=all.types.biomarkers, method="binary_all", drugs=drugs, fdr.cut.off=0.05)
+
+fdrBarplot(biomarkers=all.types.biomarkers, method="binary_all", drugs=drugs)
+integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="binary_all", drugs=drugs, fdr.cut.off=0.05, nperm=100)
+plotValidation(validation.result=integrate.all.validation, method="integrate_binary", cell="all")
+
+##common binary
+all.types.biomarkers <- integrateDrugBasedBiomarkers(method="binary_common", drugs=drugs, cut.off=0.05, ccle.sig.rna=common.ccle.sig.rna.bin, gdsc.sig.rna=common.gdsc.sig.rna2.bin, ccle.sig.cnv=common.ccle.sig.cnv.bin, gdsc.sig.cnv=common.gdsc.sig.cnv.bin, ccle.sig.mutation=common.ccle.sig.mutation.bin, gdsc.sig.mutation=common.gdsc.sig.mutation.bin)
+
+integrateEstimatesScatterplot(biomarkers=all.types.biomarkers, method="binary_common", drugs=drugs, fdr.cut.off=0.05)
+
+fdrBarplot(biomarkers=all.types.biomarkers, method="binary_common", drugs=drugs)
+integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="binary_common", drugs=drugs, fdr.cut.off=0.05, nperm=100)
+plotValidation(validation.result=integrate.all.validation, method="integrate_binary", cell="common")
 

@@ -613,7 +613,7 @@ drugBasedBiomarkers <-
 #################################################
 ## Create an excel file for the statistics of all the gene-drug associations in GDSC and CCLE
 integrateDrugBasedBiomarkers <-
-  function(method, drugs, cut.off) {
+  function(method, drugs, cut.off, ccle.sig.rna, gdsc.sig.rna, ccle.sig.cnv, gdsc.sig.cnv, ccle.sig.mutation, gdsc.sig.mutation) {
     require(WriteXLS)
     all.biomarkers <- list()
     for(drug in drugs) {
