@@ -1619,7 +1619,7 @@ if(!file.exists(myf))
   load(myf)
 }
 
-myf <- file.path(saveres, "PSets", "Sigs", "common_gdsc_sig_rna2.RData")
+myf <- file.path("PSets", "Sigs", "common_gdsc_sig_rna2.RData")
 if(!file.exists(myf))
 {
   common.gdsc.sig.rna2 <- drugSensitivitySig(pSet=common.clarified$GDSC, mDataType="rna2", drugs=drugs, features=features, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
@@ -1651,7 +1651,7 @@ if(!file.exists(myf))
 myf <- file.path(saveres, "PSets", "Sigs", "ccle_sig_rna_binary.RData")
 if(!file.exists(myf))
 {
-  ccle.sig.rna.bin <- drugSensitivitySig(pSet=CCLE.clarified, mDataType="rna", drugs=drugs, features=features[1:20], sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", sensitivity.cutoff=0.2, nthread=4)
+  ccle.sig.rna.bin <- drugSensitivitySig(pSet=CCLE.clarified, mDataType="rna", drugs=drugs, features=features, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", sensitivity.cutoff=0.2, nthread=4)
   save(ccle.sig.rna.bin, file=myf)
 }else{
   load(myf)
@@ -1770,7 +1770,7 @@ if(!file.exists(myf))
   load(myf)
 }
 
-myf <- file.path("PSets", "Sigs", "common_ccle_sig_cnv.RData")
+myf <- file.path(saveres, "PSets", "Sigs", "common_ccle_sig_cnv.RData")
 if(!file.exists(myf))
 {
   
@@ -1780,7 +1780,7 @@ if(!file.exists(myf))
   load(myf)
 }
 
-myf <- file.path("PSets", "Sigs", "common_ccle_sig_cnv_binary.RData")
+myf <- file.path(saveres, "PSets", "Sigs", "common_ccle_sig_cnv_binary.RData")
 if(!file.exists(myf))
 {
   
@@ -1791,15 +1791,6 @@ if(!file.exists(myf))
 }
 
 
-myf <- file.path(saveres, "PSets", "Sigs", "gdsc_mutation.RData")
-if(!file.exists(myf))
-{
-  gdsc.sig.mutation <- drugSensitivitySig(pSet=GDSC.clarified, mDataType="mutation", sensitivity.measure="auc_published", molecular.summary.stat="or", sensitivity.summary.stat="median", nthread=4)
-  
-  save(gdsc.sig.rna2.bin, file=myf)
-}else{
-  load(myf)
-}
 
 features.mutation.gdsc <- sapply(rownames(molecularProfiles(GDSC.clarified, "mutation")), function(x){if(!all(is.na(molecularProfiles(GDSC.clarified, "mutation")[x,]))){x}},simplify=T)
 features.mutation.gdsc <- do.call(c, features.mutation.gdsc)
@@ -1961,8 +1952,11 @@ all.types.biomarkers <- integrateDrugBasedBiomarkers(method="continuous_all", dr
 integrateEstimatesScatterplot(biomarkers=all.types.biomarkers, method="continuous_all", drugs=drugs, fdr.cut.off=0.05)
 
 fdrBarplot(biomarkers=all.types.biomarkers, method="continuous_all", drugs=drugs)
-integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="continuous_all", drugs=drugs, fdr.cut.off=0.05, nperm=100)
+integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="continuous_all", drugs=drugs, fdr.cut.off=0.05, nperm=100, )
 plotValidation(validation.result=integrate.all.validation, method="integrate_continuous", cell="all")
+
+integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="continuous_all_top100", drugs=drugs, top.ranked=100 , nperm=100)
+plotValidation(validation.result=integrate.all.validation, method="integrate_continuous_top100", cell="all")
 
 ##common continuous
 all.types.biomarkers <- integrateDrugBasedBiomarkers(method="continuous_common", drugs=drugs, cut.off=0.05, ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2, ccle.sig.cnv=common.ccle.sig.cnv, gdsc.sig.cnv=common.gdsc.sig.cnv, ccle.sig.mutation=common.ccle.sig.mutation, gdsc.sig.mutation=common.gdsc.sig.mutation)
@@ -1973,6 +1967,8 @@ fdrBarplot(biomarkers=all.types.biomarkers, method="continuous_common", drugs=dr
 integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="continuous_common", drugs=drugs, fdr.cut.off=0.05, nperm=100)
 plotValidation(validation.result=integrate.all.validation, method="integrate_continuous", cell="common")
 
+integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="continuous_common_top100", drugs=drugs, top.ranked=100 , nperm=100)
+plotValidation(validation.result=integrate.all.validation, method="integrate_continuous_top100", cell="common")
 
 ##all binary
 all.types.biomarkers <- integrateDrugBasedBiomarkers(method="binary_all", drugs=drugs, cut.off=0.05, ccle.sig.rna=ccle.sig.rna.bin, gdsc.sig.rna=gdsc.sig.rna2.bin, ccle.sig.cnv=ccle.sig.cnv.bin, gdsc.sig.cnv=gdsc.sig.cnv.bin, ccle.sig.mutation=ccle.sig.mutation.bin, gdsc.sig.mutation=gdsc.sig.mutation.bin)
