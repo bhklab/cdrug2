@@ -1675,41 +1675,6 @@ if(!file.exists(myf))
   load(myf)
 }
 
-continuous.all <- biomarkers.validation(ccle.sig.rna=ccle.sig.rna, gdsc.sig.rna=gdsc.sig.rna2, cell="all", method="continuous", drugs=drugs, fdr.cut.off=0.05, nperm=100)
-plotValidation(validation.result=continuous.all, method="continuous", cell="all")
-continuous.all.100 <- biomarkers.validation(ccle.sig.rna=ccle.sig.rna, gdsc.sig.rna=gdsc.sig.rna2, cell="all", method="continuous", drugs=drugs, fdr.cut.off=0.05, nperm=100, top.ranked=100)
-plotValidation(validation.result=continuous.all.100, method="continuous_top100", cell="all")
-
-binary.all <- biomarkers.validation(ccle.sig.rna=ccle.sig.rna.bin, gdsc.sig.rna=gdsc.sig.rna2.bin, cell="all", method="binary", drugs=drugs, fdr.cut.off=0.05, nperm=100)
-plotValidation(validation.result=binary.all, method="binary", cell="all")
-binary.all.100 <- biomarkers.validation(ccle.sig.rna=ccle.sig.rna.bin, gdsc.sig.rna=gdsc.sig.rna2.bin, cell="all", method="binary", drugs=drugs, fdr.cut.off=0.05, nperm=100, top.ranked=100)
-plotValidation(validation.result=binary.all.100, method="binary_top100", cell="all")
-
-
-test <- wilcox.test(continuous.all.100$validation, binary.all.100$validation, alternative="greater", paired=TRUE)
-test$p.value
-
-
-test <- wilcox.test(continuous.all.100$validation, continuous.common.100$validation, alternative="greater", paired=TRUE)
-test$p.value
-
-continuous.common <- biomarkers.validation(ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2, cell="common", method="continuous", drugs=drugs, fdr.cut.off=0.05, nperm=100)
-plotValidation(validation.result=continuous.common, method="continuous", cell="common")
-continuous.common.100 <- biomarkers.validation(ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2, cell="common", method="continuous", drugs=drugs, fdr.cut.off=0.05, nperm=100, top.ranked=100)
-plotValidation(validation.result=continuous.common.100, method="continuous_top100", cell="common")
-
-
-binary.commom <- biomarkers.validation(ccle.sig.rna=common.ccle.sig.rna.bin, gdsc.sig.rna=common.gdsc.sig.rna2.bin, cell="common", method="binary", drugs=drugs, fdr.cut.off=0.05, nperm=100)
-plotValidation(validation.result=binary.commom, method="binary", cell="common")
-binary.commom.100 <- biomarkers.validation(ccle.sig.rna=common.ccle.sig.rna.bin, gdsc.sig.rna=common.gdsc.sig.rna2.bin, cell="common", method="binary", drugs=drugs, fdr.cut.off=0.05, nperm=100, top.ranked=100)
-plotValidation(validation.result=binary.commom.100, method="binary_top100", cell="common")
-
-
-test <- wilcox.test(continuous.common.100$validation, binary.commom.100$validation, alternative="greater", paired=TRUE)
-test$p.value
-
-
-
 cnv.fetures <- intersect(rownames(fData(CCLE.clarified@molecularProfiles$cnv)), rownames(fData(GDSC.clarified@molecularProfiles$cnv)))
 
 myf <- file.path(saveres, "PSets", "Sigs", "gdsc_sig_cnv.RData")
@@ -1886,47 +1851,6 @@ if(!file.exists(myf))
   load(myf)
 }
 
-###Try several false discovery rate on all continuous
-fdrBarplot(ccle.sig.rna=ccle.sig.rna, gdsc.sig.rna=gdsc.sig.rna2, cell="all", method="continuous", drugs=drugs)
-fdrBarplot(ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2, cell="common", method="continuous", drugs=drugs)
-
-fdrBarplot(ccle.sig.rna=ccle.sig.rna, gdsc.sig.rna=gdsc.sig.rna2, cell="all", method="continuous_top100", drugs=drugs, top.ranked=100)
-fdrBarplot(ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2, cell="common", method="continuous_top100", drugs=drugs, top.ranked=100)
-
-topBarplot(ccle.sig.rna=ccle.sig.rna, gdsc.sig.rna=gdsc.sig.rna2, cell="all", method="continuous_topx", drugs=drugs, fdr.cut.off=0.05)
-topBarplot(ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2, cell="common", method="continuous_topx", drugs=drugs, fdr.cut.off=0.05)
-
-
-#### Sactter plots for estimates for all continuous
-estimatesScatterplot(ccle.sig.rna=ccle.sig.rna, gdsc.sig.rna=gdsc.sig.rna2, cell="all", method="continuous", drugs=drugs, features=features, fdr.cut.off=0.05)
-estimatesScatterplot(ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2, cell="common", method="continuous", drugs=drugs, features=features, fdr.cut.off=0.05)
-estimatesScatterplot(ccle.sig.rna=ccle.sig.rna.bin, gdsc.sig.rna=gdsc.sig.rna2.bin, cell="all", method="binary", drugs=drugs, features=features, fdr.cut.off=0.05)
-estimatesScatterplot(ccle.sig.rna=common.ccle.sig.rna.bin, gdsc.sig.rna=common.gdsc.sig.rna2.bin, cell="common", method="binary", drugs=drugs, features=features, fdr.cut.off=0.05)
-
-###Proportion of dataset-specific biomarkers
-continuous_common <- biomarkersSpecificity(ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2, cell="common", method="continuous", drugs=drugs, features=features, fdr.cut.off=0.05)
-continuous_all <- biomarkersSpecificity(ccle.sig.rna=ccle.sig.rna, gdsc.sig.rna=gdsc.sig.rna2, cell="all", method="continuous", drugs=drugs, features=features, fdr.cut.off=0.05)
-binary_common <- biomarkersSpecificity(ccle.sig.rna=common.ccle.sig.rna.bin, gdsc.sig.rna=common.gdsc.sig.rna2.bin, cell="common", method="binary", drugs=drugs, features=features, fdr.cut.off=0.05)
-binary_all <- biomarkersSpecificity(ccle.sig.rna=ccle.sig.rna.bin, gdsc.sig.rna=gdsc.sig.rna2.bin, cell="all", method="binary", drugs=drugs, features=features, fdr.cut.off=0.05)
-
-
-tt <- rbind("Continuous Common"=continuous_common, "Continuous All"=continuous_all, "Binary Common"=binary_common, "Binary All"=binary_all)
-
-mycol <- RColorBrewer::brewer.pal(n=7, name="Set3")
-
-test <- wilcox.test(continuous_common, binary_common, alternative="greater", paired=TRUE)
-test$p.value
-
-test <- wilcox.test(continuous_all, binary_all, alternative="greater", paired=TRUE)
-test$p.value
-
-
-pdf(file=file.path(saveres, "jacard_index.pdf"), height=10 , width=15)
-par(mar=c(8,5,2,2))
-barplot(tt, beside=TRUE, ylim=c(0,50), las=2, col=mycol[1:4], ylab= "Jaccard Index")
-legend("topright", legend=rownames(tt), col= mycol[1:4], bty="n", pch=15)
-dev.off()
-
 knownBiomarkersCheck(ccle.sig.rna=ccle.sig.rna, 
                      gdsc.sig.rna=gdsc.sig.rna2, 
                      ccle.sig.mutation=ccle.sig.mutation, 
@@ -1952,7 +1876,7 @@ all.types.biomarkers <- integrateDrugBasedBiomarkers(method="continuous_all", dr
 integrateEstimatesScatterplot(biomarkers=all.types.biomarkers, method="continuous_all", drugs=drugs, fdr.cut.off=0.05)
 
 fdrBarplot(biomarkers=all.types.biomarkers, method="continuous_all", drugs=drugs)
-integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="continuous_all", drugs=drugs, fdr.cut.off=0.05, nperm=100, )
+integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="continuous_all", drugs=drugs, fdr.cut.off=0.05, nperm=100)
 plotValidation(validation.result=integrate.all.validation, method="integrate_continuous", cell="all")
 
 integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="continuous_all_top100", drugs=drugs, top.ranked=100 , nperm=100)
@@ -1988,3 +1912,27 @@ fdrBarplot(biomarkers=all.types.biomarkers, method="binary_common", drugs=drugs)
 integrate.all.validation <- integrateBiomarkersValidation(biomarkers=all.types.biomarkers, method="binary_common", drugs=drugs, fdr.cut.off=0.05, nperm=100)
 plotValidation(validation.result=integrate.all.validation, method="integrate_binary", cell="common")
 
+###Proportion of dataset-specific biomarkers
+
+
+continuous_all <- biomarkersSpecificity(ccle.sig.rna=ccle.sig.rna, ccle.sig.cnv=ccle.sig.cnv, ccle.sig.mutation=ccle.sig.mutation, gdsc.sig.rna=gdsc.sig.rna2, gdsc.sig.cnv=gdsc.sig.cnv, gdsc.sig.mutation=gdsc.sig.mutation, cell="all", method="continuous", drugs=drugs, fdr.cut.off=0.05)
+continuous_common <- biomarkersSpecificity(ccle.sig.rna=common.ccle.sig.rna, ccle.sig.cnv=common.ccle.sig.cnv, ccle.sig.mutation=common.ccle.sig.mutation, gdsc.sig.rna=common.gdsc.sig.rna2, gdsc.sig.cnv=common.gdsc.sig.cnv, gdsc.sig.mutation=common.gdsc.sig.mutation, cell="common", method="continuous", drugs=drugs, fdr.cut.off=0.05)
+binary_all <- biomarkersSpecificity(ccle.sig.rna=ccle.sig.rna.bin, ccle.sig.cnv=ccle.sig.cnv.bin, ccle.sig.mutation=ccle.sig.mutation.bin, gdsc.sig.rna=gdsc.sig.rna2.bin, gdsc.sig.cnv=gdsc.sig.cnv.bin, gdsc.sig.mutation=gdsc.sig.mutation.bin, cell="all", method="binary", drugs=drugs, fdr.cut.off=0.05)
+binary_common <- biomarkersSpecificity(ccle.sig.rna=common.ccle.sig.rna.bin, ccle.sig.cnv=common.ccle.sig.cnv.bin, ccle.sig.mutation=common.ccle.sig.mutation.bin, gdsc.sig.rna=common.gdsc.sig.rna2.bin, gdsc.sig.cnv=common.gdsc.sig.cnv.bin, gdsc.sig.mutation=common.gdsc.sig.mutation.bin, cell="common", method="binary", drugs=drugs, fdr.cut.off=0.05)
+
+tt <- rbind("Continuous Common"=continuous_common, "Continuous All"=continuous_all, "Binary Common"=binary_common, "Binary All"=binary_all)
+
+mycol <- RColorBrewer::brewer.pal(n=7, name="Set3")
+
+test <- wilcox.test(continuous_common, binary_common, alternative="greater", paired=TRUE)
+test$p.value
+
+test <- wilcox.test(continuous_all, binary_all, alternative="greater", paired=TRUE)
+test$p.value
+
+
+pdf(file=file.path(saveres, "jacard_index.pdf"), height=10 , width=15)
+par(mar=c(8,5,2,2))
+barplot(tt, beside=TRUE, ylim=c(0,50), las=2, col=mycol[1:4], ylab= "Jaccard Index")
+legend("topright", legend=rownames(tt), col= mycol[1:4], bty="n", pch=15)
+dev.off()

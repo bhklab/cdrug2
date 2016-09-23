@@ -1,0 +1,7 @@
+"PSet.Name" "Dataset.Type" "Available.Molecular.Profiles" "Date.Updated" "URL"
+"GDSC" "GDSC" "sensitivity" "rna/rna2/mutation/fusion/cnv" "Wed Dec 30 10:44:21 2015" "https://www.pmgenomics.ca/bhklab/sites/default/files/downloads/GDSC.RData"
+"CCLE" "CCLE" "sensitivity" "rna/rnaseq/mutation/cnv" "Thu Dec 10 18:17:14 2015" "https://www.pmgenomics.ca/bhklab/sites/default/files/downloads/CCLE.RData"
+"CMAP" "CMAP" "perturbation" "rna" "Mon Sep 21 02:38:45 2015" "https://www.pmgenomics.ca/bhklab/sites/default/files/downloads/CMAP.RData"
+"GDSC_2013" "GDSC_2013" "sensitivity" "rna/mutation" "Mon Oct  5 16:07:54 2015" "https://www.pmgenomics.ca/bhklab/sites/default/files/downloads/CGP_Nature2013.RData"
+"CCLE_2013" "CCLE_2013" "sensitivity" "rna/mutation" "Tue Sep 15 18:50:07 2015" "https://www.pmgenomics.ca/bhklab/sites/default/files/downloads/CCLE_Nature2013.RData"
+"gCSI" "gCSI" "sensitivity" "rnaseq/cnv" "Mon Jun 13 18:50:12 2016" "https://www.pmgenomics.ca/bhklab/sites/default/files/downloads/gCSI.RData" 
