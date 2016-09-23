@@ -1851,18 +1851,7 @@ if(!file.exists(myf))
   load(myf)
 }
 
-knownBiomarkersCheck(ccle.sig.rna=ccle.sig.rna, 
-                     gdsc.sig.rna=gdsc.sig.rna2, 
-                     ccle.sig.mutation=ccle.sig.mutation, 
-                     gdsc.sig.mutation=gdsc.sig.mutation, 
-                     gdsc.sig.fusion=gdsc.sig.fusion,
-                     ccle.sig.cnv=ccle.sig.cnv,
-                     gdsc.sig.cnv=gdsc.sig.cnv,
-                     cell="all", method="continuous")
-knownBiomarkersCheck(ccle.sig.rna=common.ccle.sig.rna, gdsc.sig.rna=common.gdsc.sig.rna2.bin, cell="common", method="continuous")
-
-
-###Put all biomarkers in excel file
+##Put all biomarkers in excel file
 load(file.path(saveres, "signatures_data.RData"))
 
 drugBasedBiomarkers(ccle.sig.rna=ccle.sig.rna, gdsc.sig.rna=gdsc.sig.rna2, cell="all", method="continuous", drugs=drugs, features=features, cut.off=0.05)
@@ -1936,3 +1925,17 @@ par(mar=c(8,5,2,2))
 barplot(tt, beside=TRUE, ylim=c(0,50), las=2, col=mycol[1:4], ylab= "Jaccard Index")
 legend("topright", legend=rownames(tt), col= mycol[1:4], bty="n", pch=15)
 dev.off()
+
+
+### llist of known targets and biomarkers
+knownBiomarkersCheck(ccle.sig.rna=ccle.sig.rna, 
+                     gdsc.sig.rna=gdsc.sig.rna2, 
+                     ccle.sig.mutation=ccle.sig.mutation, 
+                     gdsc.sig.mutation=gdsc.sig.mutation, 
+                     gdsc.sig.fusion=gdsc.sig.fusion,
+                     ccle.sig.cnv=ccle.sig.cnv,
+                     gdsc.sig.cnv=gdsc.sig.cnv,
+                     cell="all", method="continuous")
+
+
+#

@@ -216,17 +216,17 @@ biomarkersSpecificity <-
                                               "% Both"=round(common/all, digits=2) * 100)
     }
     Jaccard <- datset.specific.biomarkers[, "% Both"]
-    xtable::print.xtable(xtable::xtable(datset.specific.biomarkers, digits=0), include.rownames=TRUE, floating=FALSE, table.placement="!h", file=sprintf("dataset_specific_biomarkers_%s_%s.tex", method, cell), append=FALSE)
+    xtable::print.xtable(xtable::xtable(datset.specific.biomarkers, digits=0), include.rownames=TRUE, floating=FALSE, table.placement="!h", file=file.path(saveres, sprintf("dataset_specific_biomarkers_%s_%s.tex", method, cell)), append=FALSE)
     return(Jaccard)
 }
 
 ###############################################
 ###check known biomarkers
-knownBiomarkersCheck <-
+knownBiomarkersCheck2 <-
   function(ccle.sig.rna, gdsc.sig.rna, ccle.sig.mutation, gdsc.sig.mutation, gdsc.sig.fusion, ccle.sig.cnv, gdsc.sig.cnv, method, cell)
   {
+    known.biomarkers <- read.csv(file.path("data", "known_biomarkers.csv"), stringsAsFactors=FALSE, header=TRUE, check.names=FALSE, na.strings=c("", " ", "NA"))
     
-    known.biomarkers <- read.csv(file="known.biomarkers.csv", stringsAsFactors=FALSE, header=TRUE, check.names=FALSE, na.strings=c("", " ", "NA"))
     known.biomarkers <- cbind(known.biomarkers, "GDSC effect size"=NA, "GDSC pvalue"=NA, "GDSC FDR"=NA, "CCLE effect size"=NA, "CCLE pvalue"=NA, "CCLE FDR"=NA, "Reproducible"=NA)
     known.biomarkers <- known.biomarkers[which(!is.na(known.biomarkers[ ,"type"])),]
     
@@ -254,9 +254,16 @@ knownBiomarkersCheck <-
           feature <- rownames(featureInfo(CCLE, "cnv"))[which(featureInfo(CCLE, "cnv")$Symbol == known.biomarkers[i ,"gene"])]
           known.biomarkers[i ,c("CCLE effect size", "CCLE pvalue", "CCLE FDR")] <- ccle.sig.cnv[feature, known.biomarkers[i ,"drug"], c("estimate","pvalue", "fdr")]
           known.biomarkers[i ,c("GDSC effect size", "GDSC pvalue", "GDSC FDR")] <- gdsc.sig.cnv[feature, known.biomarkers[i ,"drug"], c("estimate","pvalue", "fdr")]
-          known.biomarkers[i, "Reproducible"] <- ifelse(known.biomarkers[i ,"CCLE pvalue"] < 0.05 & 
-                                                          known.biomarkers[i, "GDSC pvalue"] < 0.05 & 
-                                                          sign(known.biomarkers[i ,"CCLE effect size"]) == sign(known.biomarkers[i ,"GDSC effect size"]), "YES", "NO")
+          if(known.biomarkers[i ,"CCLE pvalue"] < 0.05 & 
+             known.biomarkers[i, "GDSC pvalue"] < 0.05 & 
+             sign(known.biomarkers[i ,"CCLE effect size"]) == sign(known.biomarkers[i ,"GDSC effect size"])){
+            known.biomarkers[i, "Reproducible"] <- "YES"
+          }else if(known.biomarkers[i ,"CCLE pvalue"] >= 0.05 & 
+                   known.biomarkers[i, "GDSC pvalue"] >= 0.05){
+            known.biomarkers[i, "Reproducible"] <- "NS"
+          }else{
+            known.biomarkers[i, "Reproducible"] <- "NO" 
+          }
         }
       }
     }
@@ -266,6 +273,182 @@ knownBiomarkersCheck <-
     
 }
 
+knownBiomarkersCheck <-
+  function(ccle.sig.rna, gdsc.sig.rna, ccle.sig.mutation, gdsc.sig.mutation, gdsc.sig.fusion, ccle.sig.cnv, gdsc.sig.cnv, method, cell)
+    { ### for each known biomarker, estimate gene-drug association for mutation, fusion and expression
+    known.biomarkers <- read.csv(file.path("data", "known_biomarkers.csv"), stringsAsFactors=FALSE, header=TRUE, check.names=FALSE, na.strings=c("", " ", "NA"))
+    gdsc.known.biomarkers <- known.biomarkers
+    gdsc.known.biomarkers[,"probe"] <- rownames(fData(GDSC@molecularProfiles$rna))[match(gdsc.known.biomarkers[, "gene"], fData(GDSC@molecularProfiles$rna)[, "Symbol"])]
+    
+    gdsc.known.biomarkers[,"mutation"] <- NA
+    gdsc.known.biomarkers[,"fusion"] <- NA
+    gdsc.known.biomarkers[,"rna"] <- NA
+    for (i in 1:nrow(gdsc.known.biomarkers)) {
+      gene <- gdsc.known.biomarkers[i , "gene"]
+      probe <- gdsc.known.biomarkers[i , "probe"]
+      if (gene %in% rownames(exprs(GDSC@molecularProfiles$mutation)) && !all(is.na(exprs(GDSC@molecularProfiles$mutation)[gene, ]))) {
+        gdsc.known.biomarkers[i,"mutation"] <- 1
+      }
+      if (gene %in% rownames(exprs(GDSC@molecularProfiles$fusion)) && !all(is.na(exprs(GDSC@molecularProfiles$fusion)[gene, ]))) {
+        gdsc.known.biomarkers[i,"fusion"] <- 1
+      }
+      if (probe %in% rownames(exprs(GDSC@molecularProfiles$rna)) && !all(is.na(exprs(GDSC@molecularProfiles$rna)[probe, ]))) {
+        gdsc.known.biomarkers[i,"rna"] <- 1
+      }
+      if (gene %in% rownames(exprs(GDSC@molecularProfiles$cnv)) && !all(is.na(exprs(GDSC@molecularProfiles$cnv)[gene, ]))) {
+        gdsc.known.biomarkers[i,"cnv"] <- 1
+      }
+    }
+    for(i in 1:nrow(gdsc.known.biomarkers)) {
+      if(!is.na(gdsc.known.biomarkers[i, "mutation"])) {
+        gdsc.known.biomarkers[i, "mutation.pvalue"] <- gdsc.sig.mutation@.Data[gdsc.known.biomarkers[i,"gene"], gdsc.known.biomarkers[i,"drug"], "pvalue"]
+        gdsc.known.biomarkers[i, "mutation.estimate"] <- gdsc.sig.mutation@.Data[gdsc.known.biomarkers[i,"gene"], gdsc.known.biomarkers[i,"drug"], "estimate"]
+      }
+      if(!is.na(gdsc.known.biomarkers[i, "fusion"])) {
+        gdsc.known.biomarkers[i, "fusion.pvalue"] <- gdsc.sig.fusion@.Data[gdsc.known.biomarkers[i,"gene"], gdsc.known.biomarkers[i,"drug"], "pvalue"]
+        gdsc.known.biomarkers[i, "fusion.estimate"] <- gdsc.sig.fusion@.Data[gdsc.known.biomarkers[i,"gene"], gdsc.known.biomarkers[i,"drug"], "estimate"]
+      }
+      if(!is.na(gdsc.known.biomarkers[i, "rna"])) {
+        gdsc.known.biomarkers[i, "rna.pvalue"] <- gdsc.sig.rna@.Data[gdsc.known.biomarkers[i,"probe"], gdsc.known.biomarkers[i,"drug"], "pvalue"]
+        gdsc.known.biomarkers[i, "rna.estimate"] <- gdsc.sig.rna@.Data[gdsc.known.biomarkers[i,"probe"], gdsc.known.biomarkers[i,"drug"], "estimate"]
+      }
+    }
+    
+    ##ccle
+    ccle.known.biomarkers <- known.biomarkers
+    ccle.known.biomarkers[,"probe"] <- rownames(fData(CCLE@molecularProfiles$rna))[match(gdsc.known.biomarkers[, "gene"], fData(CCLE@molecularProfiles$rna)[, "Symbol"])]
+    
+    ccle.known.biomarkers[,"mutation"] <- NA
+    ccle.known.biomarkers[,"fusion"] <- NA
+    ccle.known.biomarkers[,"rna"] <- NA
+    ccle.known.biomarkers[,"cnv"] <- NA
+    
+    ### update CCLE PSet
+    celline.bcrabl <- c("K-562", "KYO-1", "EM-3", "AR230", "KCL22", "BV-173", "CML-T1", "EM-2", "KU812", "LAMA-84", "MEG-01")
+    fusion.ccle <- CCLE@molecularProfiles$mutation
+    exprs(fusion.ccle) <- matrix("0", nrow=1, ncol=ncol(exprs(fusion.ccle)), dimnames=list("BCR_ABL", colnames(exprs(fusion.ccle))))
+    exprs(fusion.ccle)["BCR_ABL", colnames(exprs(fusion.ccle)) %in% celline.bcrabl] <- "BCR Exon_13 to ABL Exon_2"
+    myfdata <- data.frame("Symbol"=rownames(fusion.ccle), "gene_biotype"="protein_coding", stringsAsFactors=FALSE)
+    rownames(myfdata) <- rownames(fusion.ccle)
+    mypdata <- data.frame(cbind("batchid"=NA, "cellid"=colnames(fusion.ccle)), stringsAsFactors=FALSE)
+    rownames(mypdata) <- colnames(fusion.ccle)
+    fData(fusion.ccle) <- myfdata
+    pData(fusion.ccle) <- mypdata
+    CCLE@molecularProfiles$fusion <- fusion.ccle
+    annotation(CCLE@molecularProfiles$fusion) <- "fusion"
+    
+    for (i in 1:nrow(ccle.known.biomarkers)) {
+      gene <- ccle.known.biomarkers[i , "gene"]
+      probe <- ccle.known.biomarkers[i , "probe"]
+      if (gene %in% rownames(exprs(CCLE@molecularProfiles$mutation)) && !all(is.na(exprs(CCLE@molecularProfiles$mutation)[gene, ]))) {
+        ccle.known.biomarkers[i,"mutation"] <- 1
+      }
+      if (gene %in% rownames(exprs(CCLE@molecularProfiles$fusion)) && !all(is.na(exprs(CCLE@molecularProfiles$fusion)[gene, ]))) {
+        ccle.known.biomarkers[i,"fusion"] <- 1
+      }
+      if (probe %in% rownames(exprs(CCLE@molecularProfiles$rna)) && !all(is.na(exprs(CCLE@molecularProfiles$rna)[probe, ]))) {
+        ccle.known.biomarkers[i,"rna"] <- 1
+      }
+    }
+
+   
+    ccle.sig.fusion <- drugSensitivitySig(pSet=CCLE, mDataType="fusion", drugs=unique(ccle.known.biomarkers[ ,"drug"]), features=unique(ccle.known.biomarkers[which(!is.na(ccle.known.biomarkers[,"fusion"])),"gene"]), sensitivity.measure="auc_published", molecular.summary.stat="or")
+    for(i in 1:nrow(ccle.known.biomarkers)) {
+      if(!is.na(ccle.known.biomarkers[i, "mutation"]) && ccle.known.biomarkers[i,"gene"] %in% rownames(ccle.sig.mutation@.Data)) {
+        ccle.known.biomarkers[i, "mutation.pvalue"] <- ccle.sig.mutation@.Data[ccle.known.biomarkers[i,"gene"], ccle.known.biomarkers[i,"drug"], "pvalue"]
+        ccle.known.biomarkers[i, "mutation.estimate"] <- ccle.sig.mutation@.Data[ccle.known.biomarkers[i,"gene"], ccle.known.biomarkers[i,"drug"], "estimate"]
+      }
+      if(!is.na(ccle.known.biomarkers[i, "fusion"])) {
+        ccle.known.biomarkers[i, "fusion.pvalue"] <- ccle.sig.fusion@.Data[ccle.known.biomarkers[i,"gene"], ccle.known.biomarkers[i,"drug"], "pvalue"]
+        ccle.known.biomarkers[i, "fusion.estimate"] <- ccle.sig.fusion@.Data[ccle.known.biomarkers[i,"gene"], ccle.known.biomarkers[i,"drug"], "estimate"]
+      }
+      if(!is.na(ccle.known.biomarkers[i, "rna"])) {
+        ccle.known.biomarkers[i, "rna.pvalue"] <- ccle.sig.rna@.Data[ccle.known.biomarkers[i,"probe"], ccle.known.biomarkers[i,"drug"], "pvalue"]
+        ccle.known.biomarkers[i, "rna.estimate"] <- ccle.sig.rna@.Data[ccle.known.biomarkers[i,"probe"], ccle.known.biomarkers[i,"drug"], "estimate"]
+      }
+    }
+    
+    cutoff <- 0.05
+    xx <- NULL
+    for(i in 1:nrow(ccle.known.biomarkers)) {
+      ccle.min <- names(which.min(ccle.known.biomarkers[i, grep("pvalue", colnames(ccle.known.biomarkers))]))
+      gdsc.min <- names(which.min(gdsc.known.biomarkers[i, grep("pvalue", colnames(gdsc.known.biomarkers))]))
+      tt <- NA
+      if(ccle.min == gdsc.min) {
+        if(!is.na(ccle.known.biomarkers[i, ccle.min]) & !is.na(gdsc.known.biomarkers[i, ccle.min])){
+          if(ccle.known.biomarkers[i, ccle.min] < cutoff & gdsc.known.biomarkers[i, ccle.min] < cutoff){
+            tt <- "YES"
+          }else if(ccle.known.biomarkers[i, ccle.min] >= cutoff & gdsc.known.biomarkers[i, ccle.min] >= cutoff){
+            tt <- "NS"
+          }else{
+            tt <- "NO"
+          }
+        }
+        rr <- c(known.biomarkers[i, "drug"],
+                known.biomarkers[i, "gene"],
+                gsub(".pvalue", "", ccle.min),
+                gdsc.known.biomarkers[i, gsub(".pvalue", ".estimate", ccle.min)],
+                gdsc.known.biomarkers[i, ccle.min],
+                ccle.known.biomarkers[i, gsub(".pvalue", ".estimate", ccle.min)],
+                ccle.known.biomarkers[i, ccle.min], 
+                tt)
+        xx <- rbind(xx, rr)
+      } else{
+        tt <- NA
+        if(!is.na(ccle.known.biomarkers[i, gdsc.min]) & !is.na(gdsc.known.biomarkers[i, gdsc.min])){
+          if(ccle.known.biomarkers[i, gdsc.min] < cutoff & gdsc.known.biomarkers[i, gdsc.min] < cutoff){
+            tt <- "YES"
+          }else if(ccle.known.biomarkers[i, gdsc.min] >= cutoff & gdsc.known.biomarkers[i, gdsc.min] >= cutoff){
+            tt <- "NS"
+          }else{
+            tt <- "NO"
+          }
+        }
+        rr <- c(known.biomarkers[i, "drug"],
+                known.biomarkers[i, "gene"],
+                gsub(".pvalue", "", gdsc.min),
+                gdsc.known.biomarkers[i, gsub(".pvalue", ".estimate", gdsc.min)],
+                gdsc.known.biomarkers[i, gdsc.min],
+                ccle.known.biomarkers[i, gsub(".pvalue", ".estimate", gdsc.min)],
+                ccle.known.biomarkers[i, gdsc.min], 
+                tt)
+        xx <- rbind(xx, rr)
+        tt <- NA
+        if(!is.na(ccle.known.biomarkers[i, ccle.min]) & !is.na(gdsc.known.biomarkers[i, ccle.min])){
+          if(ccle.known.biomarkers[i, ccle.min] < cutoff & gdsc.known.biomarkers[i, ccle.min] < cutoff){
+            tt <- "YES"
+          }else if(ccle.known.biomarkers[i, ccle.min] >= cutoff & gdsc.known.biomarkers[i, ccle.min] >= cutoff){
+            tt <- "NS"
+          }else{
+            tt <- "NO"
+          }
+        }
+        rr <- c(known.biomarkers[i, "drug"],
+                known.biomarkers[i, "gene"],
+                gsub(".pvalue", "", ccle.min),
+                gdsc.known.biomarkers[i, gsub(".pvalue", ".estimate", ccle.min)],
+                gdsc.known.biomarkers[i, ccle.min],
+                ccle.known.biomarkers[i, gsub(".pvalue", ".estimate", ccle.min)],
+                ccle.known.biomarkers[i, ccle.min], 
+                tt)
+        xx <- rbind(xx, rr)
+      }
+    }
+    colnames(xx) <- c("Drug", "Gene", "Type", "gdsc effect size", "gdsc pvalue", "CCLE effect size", "CCLE pvalue", "Reproducibility")
+    rownames(xx) <- 1:nrow(xx)
+    nilotinib <- which(xx[,"Drug"] == "Nilotinib")
+    rr <- xx[nilotinib, ]
+    xx <- xx[-nilotinib, ]
+    xx <- rbind(rr, xx)
+    xx <- as.data.frame(xx, stringsAsFactors=FALSE)
+    
+    xx[,"gdsc effect size"] <- as.numeric(xx[,"gdsc effect size"])
+    xx[,"CCLE effect size"] <- as.numeric(xx[,"CCLE effect size"])
+    xx[,"gdsc pvalue"] <- as.numeric(xx[,"gdsc pvalue"])
+    xx[,"CCLE pvalue"] <- as.numeric(xx[,"CCLE pvalue"])
+    xtable::print.xtable(xtable::xtable(xx, digits=c(0, 0, 0, 0, 2, -1, 2, -1, 0)), include.rownames=FALSE, floating=FALSE, table.placement="!h", file=file.path(saveres, "known_biomarkers.tex"), append=FALSE)
+    
+  }
 
 #################################################
 ## Create an excel file for the statistics of all the gene-drug associations in GDSC and CCLE
@@ -324,7 +507,7 @@ integrateDrugBasedBiomarkers <-
     }
     
     
-    WriteXLS::WriteXLS(file.path(saveres, "all.biomarkers"), ExcelFileName=sprintf("all_biomarkers_%s.xlsx", method), row.names=TRUE)
+    WriteXLS::WriteXLS(file.path(saveres, "all.biomarkers"), ExcelFileName=file.path(saveres, sprintf("all_biomarkers_%s.xlsx", method)), row.names=TRUE)
     return(all.biomarkers)
 }
 
