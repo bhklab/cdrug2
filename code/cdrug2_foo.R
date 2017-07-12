@@ -458,7 +458,7 @@ integrateDrugBasedBiomarkers <-
     }
     
     
-    WriteXLS::WriteXLS(file.path(saveres, "all.biomarkers"), ExcelFileName=file.path(saveres, sprintf("all_biomarkers_%s.xlsx", method)), row.names=TRUE)
+    WriteXLS::WriteXLS("all.biomarkers", ExcelFileName=file.path(saveres, sprintf("all_biomarkers_%s.xlsx", method)), row.names=TRUE)
     return(all.biomarkers)
 }
 
@@ -539,18 +539,20 @@ integrateBiomarkersValidation <-
       ###ccle
       biomarkers[[drug]][,3:12] <- apply(biomarkers[[drug]][,3:12], MARGIN=2, as.numeric)
       top.ccle.sig.rna <- biomarkers[[drug]][which(biomarkers[[drug]][, "CCLE_fdr"] < fdr.cut.off), ,drop=FALSE]
+      significant <- nrow(top.ccle.sig.rna)
       if(top.ranked != 0) {
         if(nrow(top.ccle.sig.rna) > 0) {
-          top.ccle.sig.rna <- top.ccle.sig.rna[1:min(top.ranked, nrow(top.ccle.sig.rna)), , drop=FALSE]
+          xx <- order(top.ccle.sig.rna[ ,"CCLE_fdr"]) 
+          top.ccle.sig.rna <- top.ccle.sig.rna[xx[1:min(top.ranked, nrow(top.ccle.sig.rna))], , drop=FALSE]
         }
       }
       
 #      top.ccle.sig.rna <- top.ccle.sig.rna[order(top.ccle.sig.rna[ , "CCLE_fdr"]), , drop=FALSE]
-      reported <- rownames(top.ccle.sig.rna)
+      reported <- nrow(top.ccle.sig.rna)
       validate <- top.ccle.sig.rna[which(top.ccle.sig.rna[,"GDSC_pvalue"] < 0.05), , drop=FALSE]
       ccle.validation[drug, ] <- c(nrow(biomarkers[[drug]]),
-                                   nrow(top.ccle.sig.rna),
-                                   length(reported),
+                                   significant,
+                                   reported,
                                    length(which(sign(validate[,"CCLE_estimate"]) == sign(validate[, "GDSC_estimate"]))))
       
       ccle.biomarkers[drug, c("features", "significant")] <- c(nrow(biomarkers[[drug]]), 
@@ -559,18 +561,20 @@ integrateBiomarkersValidation <-
       
       ###gdsc
       top.gdsc.sig.rna <- biomarkers[[drug]][which(biomarkers[[drug]][, "GDSC_fdr"] < fdr.cut.off), ,drop=FALSE]
+      significant <- nrow(top.gdsc.sig.rna)
       if(top.ranked != 0) {
         if(nrow(top.gdsc.sig.rna) > 0) {
-          top.gdsc.sig.rna <- top.gdsc.sig.rna[1:min(top.ranked, nrow(top.gdsc.sig.rna)), , drop=FALSE]
+          xx <- order(top.gdsc.sig.rna[ ,"GDSC_fdr"])
+          top.gdsc.sig.rna <- top.gdsc.sig.rna[xx[1:min(top.ranked, nrow(top.gdsc.sig.rna))], , drop=FALSE]
         }
       }
       
       #      top.gdsc.sig.rna <- top.gdsc.sig.rna[order(top.gdsc.sig.rna[ , "GDSC_fdr"]), , drop=FALSE]
-      reported <- rownames(top.gdsc.sig.rna)
+      reported <- nrow(top.gdsc.sig.rna)
       validate <- top.gdsc.sig.rna[which(top.gdsc.sig.rna[,"CCLE_pvalue"] < 0.05), , drop=FALSE]
       gdsc.validation[drug, ] <- c(nrow(biomarkers[[drug]]),
-                                   nrow(top.gdsc.sig.rna),
-                                   length(reported),
+                                   significant,
+                                   reported,
                                    length(which(sign(validate[,"GDSC_estimate"]) == sign(validate[, "CCLE_estimate"]))))
       
       gdsc.biomarkers[drug, c("features", "significant")] <- c(nrow(biomarkers[[drug]]), 

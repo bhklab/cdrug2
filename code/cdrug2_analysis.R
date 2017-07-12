@@ -1594,7 +1594,7 @@ WriteXLS::WriteXLS(x="pp", ExcelFileName=file.path(saveres, "significance_consis
 #################################################
 ###biomarkers consistancy
 
-load(file.path(saveres, "PSets","signatures_data.RData"))
+load(file.path(saveres, "signatures_data.RData"))
 load(file.path(saveres, "PSets", "GDSC_clarified.RData"))
 load(file.path(saveres, "PSets", "CCLE_clarified.RData"))
 load(file.path(saveres, "PSets", "common_clarified.RData"))
@@ -1619,7 +1619,7 @@ if(!file.exists(myf))
   load(myf)
 }
 
-myf <- file.path("PSets", "Sigs", "common_gdsc_sig_rna2.RData")
+myf <- file.path(saveres, "PSets", "Sigs", "common_gdsc_sig_rna2.RData")
 if(!file.exists(myf))
 {
   common.gdsc.sig.rna2 <- drugSensitivitySig(pSet=common.clarified$GDSC, mDataType="rna2", drugs=drugs, features=features, sensitivity.measure="auc_published", molecular.summary.stat="median", sensitivity.summary.stat="median", nthread=4)
